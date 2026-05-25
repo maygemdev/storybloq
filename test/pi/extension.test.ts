@@ -223,4 +223,45 @@ describe("Pi extension", () => {
 
     expect([...fake.tools.keys()].sort()).toEqual(["storybloq_init", "storybloq_status"]);
   });
+
+  it("degraded status re-detects a Storybloq project created after registration", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "storybloq-pi-late-project-"));
+    tmpDirs.push(dir);
+    const fake = makeFakePi();
+    storybloqPiExtension(fake.pi);
+
+    for (const handler of fake.handlers.get("session_start") ?? []) {
+      await handler({ reason: "startup" }, makeFakeContext(dir));
+    }
+
+    const statusTool = fake.tools.get("storybloq_status");
+    expect(statusTool).toBeDefined();
+    const before = await statusTool!.execute("call-1", {}, undefined, undefined, makeFakeContext(dir));
+    expect(before.content[0]?.text).toContain("No .story/ project found");
+
+    await initProject(dir, { name: "Late Pi Project" });
+    const after = await statusTool!.execute("call-2", {}, undefined, undefined, makeFakeContext(dir));
+
+    expect(after.content[0]?.text).toContain("Late Pi Project");
+    expect(after.content[0]?.text).not.toContain("No .story/ project found");
+    expect(fake.tools.has("storybloq_ticket_list")).toBe(true);
+  });
+
+  it("degraded status re-detects when a later session starts inside a Storybloq project", async () => {
+    const emptyDir = await mkdtemp(join(tmpdir(), "storybloq-pi-empty-first-"));
+    tmpDirs.push(emptyDir);
+    const root = await makeProject();
+    const fake = makeFakePi();
+    storybloqPiExtension(fake.pi);
+
+    for (const handler of fake.handlers.get("session_start") ?? []) {
+      await handler({ reason: "startup" }, makeFakeContext(emptyDir));
+      await handler({ reason: "startup" }, makeFakeContext(root));
+    }
+
+    const result = await fake.tools.get("storybloq_status")!.execute("call-1", {}, undefined, undefined, makeFakeContext(root));
+
+    expect(result.content[0]?.text).toContain("Pi Test");
+    expect(result.content[0]?.text).not.toContain("No .story/ project found");
+  });
 });

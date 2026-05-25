@@ -216,7 +216,16 @@ function registerDegradedTools(pi: ExtensionAPI, ctx: ExtensionContext, register
       description: "Project summary -- returns guidance if no .story/ project found",
       promptSnippet: "Check whether the current directory has Storybloq project state.",
       parameters: Type.Object({}),
-      async execute() {
+      async execute(_toolCallId, _params, _signal, _onUpdate, callCtx) {
+        const root = tryDiscoverRoot(callCtx?.cwd ?? ctx.cwd);
+        if (root) {
+          registerProjectTools(pi, root, registered);
+          const statusTool = getStorybloqToolDefinitions(root).find((tool) => tool.name === "storybloq_status");
+          if (statusTool) {
+            const result = await withPiClient(() => statusTool.execute({}));
+            return mcpToPiResult(result);
+          }
+        }
         return mcpToPiResult({
           content: [{ type: "text", text: "No .story/ project found. Use storybloq_init to create one, or navigate to a directory with .story/." }],
           isError: true,
@@ -237,9 +246,9 @@ function registerDegradedTools(pi: ExtensionAPI, ctx: ExtensionContext, register
         type: Type.Optional(Type.String({ description: "Project type (e.g. npm, macapp, cargo, generic)" })),
         language: Type.Optional(Type.String({ description: "Primary language (e.g. typescript, swift, rust)" })),
       }),
-      async execute(_toolCallId, params) {
+      async execute(_toolCallId, params, _signal, _onUpdate, callCtx) {
         try {
-          const projectRoot = realpathSync(ctx.cwd);
+          const projectRoot = realpathSync(callCtx?.cwd ?? ctx.cwd);
           const result = await withPiClient(() => initProject(projectRoot, {
             name: params.name,
             type: params.type,
