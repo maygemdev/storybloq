@@ -69,7 +69,7 @@ The tool returns `lensPrompts` (one per active lens) and `metadata`.
 
 For each lens prompt where `cached: false`, launch a subagent in a **single message with multiple Agent tool calls**:
 - **Prompt:** The `prompt` string returned by the prepare tool + append `\n\n## Diff to review\n\n` + the `artifact` string from Step 3
-- **If `promptTruncated: true`:** The prompt was too large to include. Read `promptRef` from the skill directory (`~/.claude/skills/story/review-lenses/<promptRef>`), fill the preamble variables (see Path B Step 5), select the stage-appropriate section, and append the artifact yourself.
+- **If `promptTruncated: true`:** The prompt was too large to include. Read `promptRef` from the active Storybloq skill directory (for example `~/.claude/skills/story/review-lenses/<promptRef>` in Claude or the Pi-installed skill directory in Pi), fill the preamble variables (see Path B Step 5), select the stage-appropriate section, and append the artifact yourself.
 - **Model:** The `model` string returned (sonnet or opus)
 - **Tools:** Read, Grep, Glob (read-only)
 

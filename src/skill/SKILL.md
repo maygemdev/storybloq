@@ -7,18 +7,28 @@ description: Track tickets, issues, and progress for your project. Load project 
 
 storybloq tracks tickets, issues, roadmap, and handovers in a `.story/` directory so every AI coding session builds on the last instead of starting from zero.
 
-Invocation differs by client: use `/story` in Claude Code, `$story` in Codex, or ask naturally to use the Storybloq skill.
+## Skill Bundle Version
+
+This Storybloq skill bundle version is `__STORYBLOQ_VERSION__`. If the user asks for the Storybloq skill version (for example "version", "what version", or "what your version?"), answer with this bundle version directly. Do not shell out to `storybloq --version` for this question because the CLI on PATH may be a different global install than the Pi skill/extension bundle.
+
+Invocation differs by client: use `/story` in Claude Code, `$story` in Codex, `/story` in Pi when the Storybloq Pi extension is installed, or `/skill:story` in Pi as the direct skill fallback.
+
+## Client Tool Rules
+
+- **Pi:** Prefer native `storybloq_*` tools registered by the Storybloq Pi extension. Pi does not require MCP or `ToolSearch` for Storybloq. When this file says `AskUserQuestion`, use Pi's normal user-prompt flow or Pi extension UI if a native structured question tool is not available.
+- **Claude Code and Codex:** Prefer Storybloq MCP tools. Claude Code desktop/web may need `ToolSearch` to surface deferred MCP schemas.
+- **Fallback:** If native Pi tools or MCP tools are unavailable, use the `storybloq` CLI via shell commands.
 
 ## Step 0.5: Active session guard (runs BEFORE argument routing)
 
 This guard runs on EVERY `/story` invocation regardless of subcommand (`/story`, `/story auto`, `/story review`, `/story plan`, `/story guided`, `/story handover`, `/story snapshot`, `/story export`, `/story design`, `/story review-lenses`, `/story settings`, `/story help`, `/story status`, etc.). It MUST complete before ANY other action in this invocation.
 
-**Guard prelude: force-surface deferred MCP tools.** Before running step 1 of this guard, make a single `ToolSearch` call with `query: "storybloq"` (max_results: 20). On Claude Code desktop/web, `storybloq_*` tool schemas are deferred — without this prelude the subsequent `storybloq_status` call in step 1 is not dispatchable. The prelude is explicitly part of the guard, not a separate pre-guard step; it satisfies the whitelist below.
+**Guard prelude for Claude/Codex MCP clients: force-surface deferred MCP tools.** Before running step 1 of this guard in Claude/Codex MCP clients, make a single `ToolSearch` call with `query: "storybloq"` (max_results: 20). On Claude Code desktop/web, `storybloq_*` tool schemas are deferred — without this prelude the subsequent `storybloq_status` call in step 1 is not dispatchable. In Pi, skip this prelude because Storybloq tools are native extension tools, not MCP tools. The prelude is explicitly part of the guard, not a separate pre-guard step; it satisfies the whitelist below.
 
 - If `ToolSearch` itself is not available or returns an error on this harness, SKIP the prelude and continue to step 1. Do NOT treat a missing `ToolSearch` tool as evidence that MCP is unavailable — step 1's `storybloq_status` call will either succeed (MCP already surfaced) or its failure will route the skill to the Step 0 setup/CLI-fallback path below.
 - The prelude is idempotent: on terminal CLI sessions where `storybloq_*` tools are already in the base list, it simply returns the same tool set.
 
-**Whitelist semantics (not blacklist).** While the guard is unresolved, the ONLY actions permitted are: (a) the guard's `ToolSearch` prelude described above, (b) the guard's own `storybloq_status` call as defined in step 1 below, (c) reading the surfaced session metadata, and (d) the guard's `AskUserQuestion` flow. NO other MCP call, file write, file read, or skill-file dispatch is permitted -- this includes `storybloq_handover_create`, `storybloq_snapshot`, `storybloq_export`, `storybloq_ticket_create`, `storybloq_ticket_update`, `storybloq_issue_*`, `storybloq_note_*`, `storybloq_autonomous_guide` with any action other than the user-authorized `resume` / `cancel`, and any read or write inside `.story/sessions/<active-sessionId>/`. Subcommand-specific dispatch (to `autonomous-mode.md`, `design/design.md`, `review-lenses/review-lenses.md`, `setup-flow.md`, `reference.md`, etc.) is also blocked. The guard is a hard gate, not a soft warning.
+**Whitelist semantics (not blacklist).** While the guard is unresolved, the ONLY actions permitted are: (a) the guard's `ToolSearch` prelude described above when applicable, (b) the guard's own `storybloq_status` call as defined in step 1 below, (c) reading the surfaced session metadata, and (d) the guard's user-question flow (`AskUserQuestion` where available, otherwise a normal prompt such as Pi's user interaction flow). NO other Storybloq tool call, MCP call, file write, file read, or skill-file dispatch is permitted -- this includes `storybloq_handover_create`, `storybloq_snapshot`, `storybloq_export`, `storybloq_ticket_create`, `storybloq_ticket_update`, `storybloq_issue_*`, `storybloq_note_*`, `storybloq_autonomous_guide` with any action other than the user-authorized `resume` / `cancel`, and any read or write inside `.story/sessions/<active-sessionId>/`. Subcommand-specific dispatch (to `autonomous-mode.md`, `design/design.md`, `review-lenses/review-lenses.md`, `setup-flow.md`, `reference.md`, etc.) is also blocked. The guard is a hard gate, not a soft warning.
 
 1. Call `storybloq_status` once. If the output contains a `## Active Sessions` heading, OR any subsequent guide call in this invocation fails with an "existing session" / "resumable session" error, you must STOP and surface the situation to the user:
    - Extract for each surfaced session: the **full `sessionId`** (required for every guide call), plus state, mode, and ticket (if any). Derive the displayed token `<T>` from the full `sessionId` per the Step 3 definition. If `storybloq_status` exposes only a truncated/rendered ID and no way to recover the full `sessionId` for a surfaced session (and the guide-error fallback in Step 3 also does not name a full `sessionId`), STOP. Do NOT offer Resume or Cancel. Tell the user: "A session appears to be active but its full `sessionId` cannot be recovered from the skill's tools. Please inspect `.story/sessions/` or run `storybloq session list` before retrying."
@@ -46,6 +56,7 @@ This guard has precedence over every "do not ask the user" rule elsewhere in thi
 - `/story snapshot` -> save project state (call `storybloq_snapshot` MCP tool)
 - `/story export` -> export project for sharing. Ask the user whether to export the current phase or the full project, then call `storybloq_export` with either `phase` or `all` set
 - `/story status` -> quick status check (call `storybloq_status` MCP tool)
+- `/story version` or natural-language version questions -> report the Skill Bundle Version from this file directly; do not perform project setup checks or run `storybloq --version`
 - `/story settings` -> manage project settings (see Settings section below)
 - `/story design` -> evaluate frontend design (read `design/design.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
 - `/story design <platform>` -> evaluate for specific platform: web, ios, macos, android (read `design/design.md` in the same directory as this skill file)
@@ -57,7 +68,9 @@ If the user's intent doesn't match any of these, use the full context load.
 
 ## Step 0: Check Setup
 
-Check if the storybloq MCP tools are available.
+Check if Storybloq native tools or MCP tools are available.
+
+**Pi extension path.** In Pi, check for native `storybloq_*` tools first. If they are present, proceed to Step 1. Do not use `ToolSearch`, do not set up MCP, and do not install Claude/Codex hooks for Pi.
 
 **Deferred tools note (Claude Code app).** Claude Code desktop/web may register MCP tools at session start but defer exposing their full schemas to your tool list until you explicitly request them. A naive "look for `storybloq_status` in available tools" check fails on a cold session even when the MCP server is healthy and connected, routing the skill to the CLI fallback unnecessarily. The Step 0.5 guard prelude above (the `ToolSearch` call) has already force-surfaced any deferred tools by this point, so this step only needs to check the current tool list:
 
@@ -73,10 +86,11 @@ Check if the storybloq MCP tools are available.
    - If Node.js is missing, tell the user to install Node.js 20+ first
    - Otherwise, with user permission, run: `npm install -g @storybloq/storybloq@latest`
    - Then run: `storybloq setup --client all`
-   - Tell the user to restart the AI client and run `/story` in Claude Code or `$story` in Codex
+   - Tell the user to restart the AI client and run `/story` in Claude Code or Pi, `$story` in Codex, or `/skill:story` in Pi
 3. If CLI IS installed but MCP not registered:
-   - With user permission, run: `storybloq setup --client all`
-   - Tell the user to restart the AI client and run `/story` in Claude Code or `$story` in Codex
+   - In Pi, tell the user to run `pi install npm:@storybloq/storybloq`
+   - In Claude/Codex, with user permission, run: `storybloq setup --client all`
+   - Tell the user to restart the AI client and run `/story` in Claude Code or Pi, `$story` in Codex, or `/skill:story` in Pi
 
 **Important:** Always use `npm install -g` (pinned to `@latest`), never `npx`, for the CLI. The MCP server and the configured hooks call `storybloq` as a global binary; going through `npx` per invocation would add cold-start latency on every hook fire (PreCompact, SessionStart, Stop).
 

@@ -6,6 +6,8 @@ This file is referenced from SKILL.md for `/story auto`, `/story review`, `/stor
 
 `/story auto` starts an autonomous coding session. The guide picks tickets, plans, reviews, implements, and commits -- looping until all tickets are done or the session limit is reached.
 
+Pi support is foreground and single-session in the initial integration. Do not use Claude Agent View, Claude background dispatch, scheduled wakeups, or any Pi background-dispatch substitute for Pi sessions.
+
 **How it works:**
 
 1. Call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start" }`
@@ -28,6 +30,7 @@ Concretely, authorization is scoped per full `sessionId`. The UI displays a **se
 
 **Critical rules for autonomous mode:**
 - Do NOT use Claude Code's plan mode -- write plans as markdown files
+- In Pi, write plans as markdown files too; Pi has no Storybloq Agent View or background dispatch in this release.
 - Do NOT ask the user for confirmation or approval during the normal pipeline. (Exception: the active-session guard above always asks.)
 - Do NOT stop or summarize between tickets -- call the guide IMMEDIATELY
 - Do NOT wrap autonomous execution in Claude Code's `/loop` skill, `ScheduleWakeup`, or `CronCreate`. The state machine IS the loop: PICK_TICKET -> PLAN -> ... -> COMPLETE -> PICK_TICKET. "Continue immediately" means advance on THIS turn, not schedule a future wakeup. The scheduler tools persist across compactions independent of conversation state, so a `ScheduleWakeup` chain will self-perpetuate through compact/resume and keep burning prompt cache + compute; the user has no natural interrupt point because each turn looks like "just one more small close." The only correct pacing is the guide's `report` -> next-action cadence. See ISS-588 for the observed failure mode.
@@ -37,6 +40,8 @@ Concretely, authorization is scoped per full `sessionId`. The UI displays a **se
 **Recommended setup for long sessions:**
 
 Run Claude Code with: `claude --model claude-opus-4-6 --dangerously-skip-permissions`
+
+In Pi, run in the foreground with the Storybloq Pi extension installed and use `/story auto`; the extension lifecycle handles compaction/status integration for Pi.
 
 - **Skip-permissions** enables unattended execution -- no approval prompts consuming context
 - **Storybloq handles compaction automatically** -- context preserved across compactions, do not cancel because context feels large

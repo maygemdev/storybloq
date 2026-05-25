@@ -304,10 +304,10 @@ storybloq codex-review plan|code --session <id> --format guide-report
 ```
 
 ### setup
-Install Storybloq skill, MCP, and hooks for Claude, Codex, or both
+Install Storybloq integrations for Claude, Codex, Pi, or all supported clients
 
 ```
-storybloq setup [--client claude|codex|all] [--skip-hooks]
+storybloq setup [--client claude|codex|pi|all] [--skip-hooks]
 ```
 
 ### setup-skill
@@ -393,12 +393,13 @@ Creates issues automatically when storybloq MCP tools or CLI are available. Chec
 
 ### Project Setup
 1. `npm install -g @storybloq/storybloq` - install CLI
-2. `storybloq setup --client all` - install Storybloq skill, MCP, and hooks for Claude Code and Codex
-3. `storybloq init --name my-project` - initialize .story/ in your project
+2. `storybloq setup --client all` - install Storybloq skill, MCP, and hooks for Claude Code/Codex, and show Pi package installation guidance
+3. Pi users can install the native package directly with `pi install npm:@storybloq/storybloq`, then run `/story` or `/skill:story`
+4. `storybloq init --name my-project` - initialize .story/ in your project
 
 ## Troubleshooting
 
-- **MCP not connected:** Run `storybloq setup --client all`
+- **MCP not connected:** Run `storybloq setup --client all` for Claude/Codex. Pi uses native extension tools instead of MCP.
 - **CLI not found:** Run `npm install -g @storybloq/storybloq`
 - **Stale data:** Run `storybloq validate` to check integrity
-- **Storybloq skill not available:** Run `storybloq setup --client all` to install the skill
+- **Storybloq skill not available:** Run `storybloq setup --client all` for Claude/Codex, or `pi install npm:@storybloq/storybloq` for Pi

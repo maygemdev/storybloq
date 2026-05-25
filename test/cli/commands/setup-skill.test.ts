@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -24,6 +24,21 @@ describe("setup-skill", () => {
     expect(content).toContain("description:");
     expect(content).toContain("## Step 0: Check Setup");
     expect(content).toContain("## Step 2: Load Context");
+  });
+
+  it("SKILL.md documents Pi invocation and native tool behavior", async () => {
+    const content = await readFile(join(PROJECT_ROOT, "src", "skill", "SKILL.md"), "utf-8");
+    expect(content).toContain("/story` in Pi");
+    expect(content).toContain("/skill:story");
+    expect(content).toContain("Prefer native `storybloq_*` tools registered by the Storybloq Pi extension");
+    expect(content).toContain("Pi does not require MCP or `ToolSearch`");
+    expect(content).toContain("use Pi's normal user-prompt flow");
+  });
+
+  it("autonomous docs state Pi foreground single-session support", async () => {
+    const content = await readFile(join(PROJECT_ROOT, "src", "skill", "autonomous-mode.md"), "utf-8");
+    expect(content).toContain("Pi support is foreground and single-session");
+    expect(content).toContain("no Storybloq Agent View or background dispatch");
   });
 
   it("reference.md contains expected sections", async () => {
@@ -1511,5 +1526,67 @@ describe("Codex setup helpers", () => {
     expect(second).toBe("exists");
     expect(settings.hooks.SessionStart[0]!.matcher).toBe("startup|resume|clear");
     expect(settings.hooks.SessionStart[0]!.hooks[0]!.command).toContain("--codex-hook-json");
+  });
+});
+
+describe("Pi setup", () => {
+  let tempDir: string;
+  let originalHome: string | undefined;
+  let originalPath: string | undefined;
+
+  beforeEach(async () => {
+    tempDir = join(tmpdir(), `storybloq-pi-setup-${randomUUID()}`);
+    await mkdir(tempDir, { recursive: true });
+    originalHome = process.env.HOME;
+    originalPath = process.env.PATH;
+    process.env.HOME = tempDir;
+    process.env.PATH = "";
+    process.exitCode = undefined;
+  });
+
+  afterEach(async () => {
+    if (originalHome === undefined) delete process.env.HOME;
+    else process.env.HOME = originalHome;
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+    vi.restoreAllMocks();
+    await rm(tempDir, { recursive: true, force: true });
+    process.exitCode = undefined;
+  });
+
+  it("accepts --client pi and prints native Pi install guidance without writing client settings", async () => {
+    const stdout: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((chunk: string | Uint8Array) => {
+      stdout.push(String(chunk));
+      return true;
+    });
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+
+    const { handleSetup } = await import("../../../src/cli/commands/setup-skill.js");
+    await handleSetup({ client: "pi", skipHooks: true });
+
+    const output = stdout.join("");
+    expect(output).toContain("pi install npm:@storybloq/storybloq");
+    expect(output).toContain("Pi uses extension lifecycle events");
+    expect(output).toContain("/story or /skill:story");
+    expect(existsSync(join(tempDir, ".claude"))).toBe(false);
+    expect(existsSync(join(tempDir, ".codex"))).toBe(false);
+    expect(existsSync(join(tempDir, ".pi"))).toBe(false);
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it("rejects invalid clients with pi in the expected-client message", async () => {
+    const stderr: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation((chunk: string | Uint8Array) => {
+      stderr.push(String(chunk));
+      return true;
+    });
+
+    const { handleSetup } = await import("../../../src/cli/commands/setup-skill.js");
+    await handleSetup({ client: "bogus" as never });
+
+    expect(stderr.join("")).toContain("Expected claude, codex, pi, or all");
+    expect(process.exitCode).toBe(1);
   });
 });

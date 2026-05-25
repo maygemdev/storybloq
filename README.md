@@ -41,7 +41,8 @@ Every project gets a `.story/` directory of JSON and markdown files. Tickets, is
 
 - **CLI:** `storybloq` - inspect and mutate `.story/` from the terminal.
 - **MCP server:** 53 tools Claude Code and Codex can call directly, no subprocess spawning.
-- **Skill:** `/story` in Claude Code or `$story` in Codex loads project state at the start of every session.
+- **Pi package:** native Pi extension tools plus the Storybloq skill, no MCP bridge required.
+- **Skill:** `/story` in Claude Code or Pi, `$story` in Codex, or `/skill:story` in Pi loads project state at the start of every session.
 - **Mac app:** native sidebar that watches `.story/` and updates live while your AI client works (separate product, free on the App Store).
 
 ## Install
@@ -51,9 +52,18 @@ npm install -g @storybloq/storybloq@latest
 storybloq setup --client all
 ```
 
-Requires Node.js 20+ and at least one AI client: Claude Code or Codex CLI 0.130.0+. Package lives on npm at [**@storybloq/storybloq**](https://www.npmjs.com/package/@storybloq/storybloq); releases are tagged on this repo at [github.com/Storybloq/storybloq/releases](https://github.com/Storybloq/storybloq/releases).
+Requires Node.js 20+ and at least one AI client: Claude Code, Codex CLI 0.130.0+, or Pi. Package lives on npm at [**@storybloq/storybloq**](https://www.npmjs.com/package/@storybloq/storybloq); releases are tagged on this repo at [github.com/Storybloq/storybloq/releases](https://github.com/Storybloq/storybloq/releases).
 
-`setup --client all` installs the Storybloq skill for Claude and Codex, registers this package as an MCP server, and configures available client hooks. Re-running it is safe. `setup-skill` remains as a compatibility alias for Claude-only setup.
+`setup --client all` installs the Storybloq skill for Claude and Codex, registers this package as an MCP server, configures available client hooks, and prints the Pi native package install command. Re-running it is safe. `setup-skill` remains as a compatibility alias for Claude-only setup.
+
+Pi users can also install directly:
+
+```bash
+pi install npm:@storybloq/storybloq
+pi
+/story
+# or: /skill:story
+```
 
 ## Upgrading
 
@@ -106,7 +116,7 @@ Commit everything except `.story/snapshots/`.
 
 ## Daily use
 
-Inside Claude Code:
+Inside Claude Code or Pi (`$story` in Codex):
 
 - **`/story`** - loads project status, reads the latest handover, surfaces open tickets and issues, lists blocked work, summarizes recent changes.
 - **`/story auto T-001 T-002 ISS-013`** - autonomous mode scoped to those items. Drives a ticket through plan -> plan review -> implement -> tests -> code review -> commit with handovers at each checkpoint.
@@ -160,7 +170,7 @@ All commands accept `--format json|md` (default `md`). Pipe JSON through `jq` fo
 | `storybloq init [--name] [--type orchestrator] [--force]` | Scaffold `.story/` (add `--type orchestrator` for multi-repo) |
 | `storybloq status` | Project summary with phase statuses, counts, and risks |
 | `storybloq validate` | Reference integrity + schema checks |
-| `storybloq setup --client claude\|codex\|all [--skip-hooks]` | Install Storybloq skills, register MCP, and configure client hooks |
+| `storybloq setup --client claude\|codex\|pi\|all [--skip-hooks]` | Install Storybloq integrations, register MCP for Claude/Codex, and show Pi package install guidance |
 | `storybloq setup-skill [--skip-hooks]` | Compatibility alias for `storybloq setup --client claude` |
 | `storybloq recommend --count N` | Context-aware work suggestions |
 
@@ -231,7 +241,7 @@ All commands accept `--format json|md` (default `md`). Pipe JSON through `jq` fo
 
 ## MCP server reference
 
-Register with Claude Code or Codex (done automatically by setup):
+Register with Claude Code or Codex (done automatically by setup). Pi uses the native extension declared in the package manifest instead of MCP:
 
 ```bash
 claude mcp add storybloq -s user -- storybloq --mcp
@@ -269,6 +279,8 @@ The server imports the same TypeScript modules as the CLI directly, so there's n
 </p>
 
 ## Hooks
+
+Pi does not use these hook files. The Storybloq Pi extension handles session start, turn end, and compaction lifecycle events natively.
 
 ### PreCompact (Claude-only auto-snapshot, set up by setup)
 

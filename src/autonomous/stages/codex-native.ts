@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 
-export type StorybloqClient = "claude" | "codex";
+export type StorybloqClient = "claude" | "codex" | "pi";
 
 export interface ReviewBackendConfig {
   readonly reviewBackends: readonly string[];
@@ -8,11 +8,14 @@ export interface ReviewBackendConfig {
 }
 
 export function currentStorybloqClient(): StorybloqClient {
-  return process.env.STORYBLOQ_CLIENT === "codex" ? "codex" : "claude";
+  if (process.env.STORYBLOQ_CLIENT === "codex") return "codex";
+  if (process.env.STORYBLOQ_CLIENT === "pi") return "pi";
+  return "claude";
 }
 
 export function reviewBackendsForClient(config: ReviewBackendConfig): readonly string[] {
-  if (currentStorybloqClient() === "codex") {
+  const client = currentStorybloqClient();
+  if (client === "codex" || client === "pi") {
     return config.codexReviewBackends ?? ["lenses"];
   }
   return config.reviewBackends;

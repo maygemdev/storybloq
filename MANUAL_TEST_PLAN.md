@@ -4,6 +4,38 @@
 
 ---
 
+## Pi Integration Smoke Tests
+
+### Pi Package Install
+- [ ] `npm run build` creates `dist/pi-extension.js`
+- [ ] `npm pack --dry-run` includes `dist/pi-extension.js` and `src/skill/`
+- [ ] `pi install ./path/to/storybloq` succeeds from a local checkout
+- [ ] `pi install npm:@storybloq/storybloq` succeeds after publish
+
+### Pi Skill Invocation
+- [ ] Start `pi` in a project with `.story/`
+- [ ] `/skill:story` loads Storybloq context
+- [ ] `/story` routes to Storybloq context loading
+- [ ] Pi exposes native `storybloq_*` tools without MCP registration
+- [ ] Starting Pi outside a `.story/` project exposes degraded `storybloq_status` and `storybloq_init`
+
+### Pi Tool Smoke
+- [ ] `storybloq_status` returns project status
+- [ ] `storybloq_ticket_list`, `storybloq_ticket_get`, `storybloq_ticket_create`, and `storybloq_ticket_update` work
+- [ ] `storybloq_issue_list`, `storybloq_issue_get`, `storybloq_issue_create`, and `storybloq_issue_update` work
+- [ ] `storybloq_handover_latest` and `storybloq_handover_create` work
+- [ ] `storybloq_snapshot` and `storybloq_recap` work
+- [ ] Federation node read/write behavior matches MCP behavior
+
+### Pi Autonomous And Review
+- [ ] `/story auto T-XXX` starts foreground single-session autonomous mode
+- [ ] Agent can report progress through `storybloq_autonomous_guide`
+- [ ] Pi compaction triggers Storybloq compact preparation
+- [ ] Resume guidance appears after compaction without bypassing the active-session guard
+- [ ] `storybloq_review_lenses_prepare`, `storybloq_review_lenses_synthesize`, and `storybloq_review_lenses_judge` work in Pi
+
+---
+
 ## Bug Fixes (v0.1.2–0.1.3)
 
 ### 1. Yargs Error Handling (no stack traces)

@@ -249,8 +249,8 @@ export const COMMANDS: readonly CommandEntry[] = [
   },
   {
     name: "setup",
-    description: "Install Storybloq skill, MCP, and hooks for Claude, Codex, or both",
-    usage: "storybloq setup [--client claude|codex|all] [--skip-hooks]",
+    description: "Install Storybloq integrations for Claude, Codex, Pi, or all supported clients",
+    usage: "storybloq setup [--client claude|codex|pi|all] [--skip-hooks]",
     flags: ["--client", "--skip-hooks"],
   },
   {

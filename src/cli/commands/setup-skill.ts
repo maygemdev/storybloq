@@ -460,7 +460,7 @@ export interface SetupSkillOptions {
   skipHooks?: boolean;
 }
 
-export type SetupClient = "claude" | "codex" | "all";
+export type SetupClient = "claude" | "codex" | "pi" | "all";
 
 export interface SetupOptions extends SetupSkillOptions {
   client?: SetupClient;
@@ -1191,10 +1191,39 @@ async function handleSetupCodex(options: SetupSkillOptions = {}): Promise<void> 
   log("Done! Restart Codex, then invoke $story in any project.");
 }
 
+export async function handleSetupPi(options: SetupSkillOptions = {}): Promise<void> {
+  log("Storybloq Pi setup uses Pi's native package installer.");
+  log("");
+
+  try {
+    const versionOutput = execFileSync("pi", ["--version"], { encoding: "utf-8", stdio: "pipe", timeout: 5000 });
+    const version = versionOutput.trim().split("\n")[0]?.trim();
+    log(`  Pi CLI detected${version ? `: ${version}` : ""}`);
+  } catch {
+    log("  Pi CLI not found in PATH.");
+    log("  Install Pi first from https://pi.dev, then run the install command below.");
+  }
+
+  log("");
+  log("Install from npm:");
+  log("  pi install npm:@storybloq/storybloq");
+  log("");
+  log("Local development install:");
+  log(`  pi install ${process.cwd()}`);
+
+  if (options.skipHooks) {
+    log("");
+    log("  Note: --skip-hooks has no Pi effect; Pi uses extension lifecycle events instead of hook files.");
+  }
+
+  log("");
+  log("After installation, start Pi in a project and run /story or /skill:story.");
+}
+
 export async function handleSetup(options: SetupOptions = {}): Promise<void> {
   const client = options.client ?? "all";
-  if (!["claude", "codex", "all"].includes(client)) {
-    process.stderr.write(`Invalid client "${client}". Expected claude, codex, or all.\n`);
+  if (!["claude", "codex", "pi", "all"].includes(client)) {
+    process.stderr.write(`Invalid client "${client}". Expected claude, codex, pi, or all.\n`);
     process.exitCode = 1;
     return;
   }
@@ -1205,6 +1234,10 @@ export async function handleSetup(options: SetupOptions = {}): Promise<void> {
   if (client === "all") log("");
   if (client === "codex" || client === "all") {
     await handleSetupCodex(options);
+  }
+  if (client === "all") log("");
+  if (client === "pi" || client === "all") {
+    await handleSetupPi(options);
   }
 }
 

@@ -21,7 +21,7 @@ These rules govern the entire setup flow. Follow them at every gate.
 
 ## AI-Assisted Setup Flow
 
-This flow creates a meaningful `.story/` project instead of empty scaffolding. Claude analyzes the project, proposes structure, and creates everything via MCP tools.
+This flow creates a meaningful `.story/` project instead of empty scaffolding. The active AI client analyzes the project, proposes structure, and creates everything via native Storybloq tools in Pi or MCP tools in Claude/Codex.
 
 #### 1a. Detect Project Type
 
@@ -46,7 +46,7 @@ If none found (empty or near-empty directory) -> skip to **1c. New Project -- In
 
 Before diving into analysis, briefly introduce storybloq to the user:
 
-"Storybloq tracks your project's roadmap, tickets, issues, and session handovers in a `.story/` directory. Every Claude Code session starts by reading this context, so you never re-explain your project from scratch. Sessions build on each other: decisions, blockers, and lessons carry forward automatically. I'll analyze your project and propose a structure. You can adjust everything before I create anything."
+"Storybloq tracks your project's roadmap, tickets, issues, and session handovers in a `.story/` directory. Every Storybloq-enabled AI coding session starts by reading this context, so you never re-explain your project from scratch. Sessions build on each other: decisions, blockers, and lessons carry forward automatically. I'll analyze your project and propose a structure. You can adjust everything before I create anything."
 
 Keep it to 3-4 sentences. Not a sales pitch, just enough that the user knows what they're opting into and that they're in control.
 
@@ -502,7 +502,7 @@ Only proceed to **1e. Execute on Approval** after the user selects "Create every
     Skip VERIFY when: static site, CLI, library, package, mobile-only, BaaS (no custom server).
     Skip BUILD when: Python, Go (compiled at test time).
 
-**Force-surface post-init MCP tools (Claude Code app).** Right after `storybloq_init` returns, call `ToolSearch(query: "storybloq", max_results: 20)`. The MCP server registers all 47 remaining tools when init completes, but some clients (notably Claude Code desktop/web) cache the pre-init tool list and only refresh when explicitly prompted. This one call makes `storybloq_phase_create`, `storybloq_ticket_create`, etc. dispatchable without a client restart. If `ToolSearch` returns only 2 tools (init + status), the full tool set didn't register server-side -- fall back to CLI via `Bash` (`storybloq phase create ...`, `storybloq ticket create ...`) and note in the summary that a client restart may be needed.
+**Force-surface post-init tools where needed.** In Claude Code MCP clients, right after `storybloq_init` returns, call `ToolSearch(query: "storybloq", max_results: 20)`. The MCP server registers all remaining tools when init completes, but some clients (notably Claude Code desktop/web) cache the pre-init tool list and only refresh when explicitly prompted. This one call makes `storybloq_phase_create`, `storybloq_ticket_create`, etc. dispatchable without a client restart. In Pi, skip `ToolSearch`; the Storybloq Pi extension refreshes native tools in-session after `storybloq_init`. If the full tool set still is not available, fall back to CLI via `Bash` (`storybloq phase create ...`, `storybloq ticket create ...`) and note in the summary that a client restart may be needed.
 
 2. Call `storybloq_phase_create` for each phase -- first phase with `atStart: true`, subsequent with `after: <previous-phase-id>`
 3. **Pass 1:** Call `storybloq_ticket_create` for each ticket WITHOUT `blockedBy` (ticket IDs don't exist until after creation)
@@ -599,7 +599,7 @@ If the repo already exists, just verify `.gitignore` contains `.story/snapshots/
 
 Present a brief completion message and tell the user how to start:
 
-"Your project is set up -- [X] phases, [Y] tickets, CLAUDE.md, and RULES.md created. Type **`/story`** at the start of any session to load context and see what to work on. Or type **`/story auto`** to let me work through the tickets autonomously."
+"Your project is set up -- [X] phases, [Y] tickets, CLAUDE.md, and RULES.md created. Type **`/story`** in Claude/Pi or **`$story`** in Codex at the start of any session to load context and see what to work on. Or type **`/story auto`** (or the equivalent client invocation) to let me work through the tickets autonomously."
 
 Keep it to 2-3 sentences. The system teaches itself through use -- `/story` loads context, shows status, and suggests next work. No need for a manual.
 

@@ -2,7 +2,7 @@
   "name": "@storybloq/storybloq",
   "version": "1.4.2",
   "license": "PolyForm-Noncommercial-1.0.0",
-  "description": "Project memory for Claude Code. Storybloq stores tickets, issues, handovers, and lessons in a .story/ folder inside your repo so every session starts where the last one left off. Pairs with the Storybloq Mac app on the App Store.",
+  "description": "Project memory for AI coding clients. Storybloq stores tickets, issues, handovers, and lessons in a .story/ folder inside your repo so every session starts where the last one left off. Pairs with the Storybloq Mac app on the App Store.",
   "homepage": "https://storybloq.com",
   "repository": {
     "type": "git",
@@ -10,6 +10,7 @@
   },
   "keywords": [
     "storybloq",
+    "pi-package",
     "claude-code",
     "ai-development",
     "session-continuity",
@@ -28,6 +29,14 @@
   "bin": {
     "storybloq": "./dist/cli.js"
   },
+  "pi": {
+    "skills": [
+      "./dist/skill"
+    ],
+    "extensions": [
+      "./dist/pi-extension.js"
+    ]
+  },
   "files": [
     "dist",
     "src/skill",
@@ -37,7 +46,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node scripts/build-pi-skill.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "tsup --watch",
@@ -49,12 +58,18 @@
     "yargs": "^17",
     "zod": "^3"
   },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.75.5",
+    "typebox": "^1.1.38"
+  },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.75.5",
     "@types/node": "^20",
     "@types/proper-lockfile": "^4.1.4",
     "@types/yargs": "^17",
     "tsup": "^8",
     "tsx": "^4.21.0",
+    "typebox": "^1.1.38",
     "typescript": "^5",
     "vitest": "^3"
   }

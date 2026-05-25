@@ -36,4 +36,19 @@ describe("client-specific review backends", () => {
       reviewBackends: ["codex", "agent"],
     })).toEqual(["lenses"]);
   });
+
+  it("uses Pi-safe review backends for Pi sessions and defaults to lenses", async () => {
+    const { currentStorybloqClient, reviewBackendsForClient } = await import("../../src/autonomous/stages/codex-native.js");
+    process.env.STORYBLOQ_CLIENT = "pi";
+
+    expect(currentStorybloqClient()).toBe("pi");
+    expect(reviewBackendsForClient({
+      reviewBackends: ["codex", "agent"],
+      codexReviewBackends: ["lenses"],
+    })).toEqual(["lenses"]);
+
+    expect(reviewBackendsForClient({
+      reviewBackends: ["codex", "agent"],
+    })).toEqual(["lenses"]);
+  });
 });

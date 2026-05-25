@@ -14,31 +14,10 @@ import { initProject } from "../core/init.js";
 import { handleNodeList } from "../cli/commands/node.js";
 import { resolveNodePath } from "../federation/resolver.js";
 import { TARGET_WORK_ID_REGEX, LENS_FINDING_DISPOSITIONS } from "../autonomous/session-types.js";
-import { findActiveSessionMinimal, readSessionResilient, sessionDir, isLeaseExpired } from "../autonomous/session.js";
+import { readSessionResilient, sessionDir, isLeaseExpired } from "../autonomous/session.js";
 import { touchLastMcpCallFile } from "../autonomous/liveness.js";
-
-// ISS-407: Cache active session dir to avoid O(n) directory scan on every MCP call.
-// Expires after 30s -- long enough to amortize hot-path calls, short enough
-// to detect session transitions within a reasonable window.
-const _SESSION_CACHE_TTL_MS = 30_000;
-let _cachedSessionDir: string | null = null;
-let _cachedSessionAt = 0;
-
-function touchMcpLiveness(pinnedRoot: string): void {
-  const now = Date.now();
-  if (_cachedSessionDir && now - _cachedSessionAt < _SESSION_CACHE_TTL_MS) {
-    touchLastMcpCallFile(_cachedSessionDir);
-    return;
-  }
-  const s = findActiveSessionMinimal(pinnedRoot);
-  if (s) {
-    _cachedSessionDir = sessionDir(pinnedRoot, s.sessionId);
-    _cachedSessionAt = now;
-    touchLastMcpCallFile(_cachedSessionDir);
-  } else {
-    _cachedSessionDir = null;
-  }
-}
+import { runMcpReadTool, runMcpWriteTool, touchMcpLiveness } from "../tools/storybloq-tool-runner.js";
+export { runMcpReadTool, runMcpWriteTool } from "../tools/storybloq-tool-runner.js";
 import {
   SUBPROCESS_CATEGORIES,
   sanitizeCmd,
@@ -50,9 +29,6 @@ import { validateCachedFindings } from "../autonomous/review-lenses/schema-valid
 import type { LensFinding } from "../autonomous/review-lenses/types.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { loadProject } from "../core/project-loader.js";
-import { ProjectLoaderError, INTEGRITY_WARNING_TYPES } from "../core/errors.js";
-import { CliValidationError } from "../cli/helpers.js";
 import {
   TICKET_ID_REGEX,
   ISSUE_ID_REGEX,
@@ -66,9 +42,6 @@ import {
   LESSON_STATUSES,
   LESSON_SOURCES,
 } from "../models/types.js";
-import type { CommandContext, CommandResult } from "../cli/types.js";
-
-import { withProjectLock } from "../core/project-loader.js";
 
 // Handler imports — pure functions, no run.ts side effects
 import { handleStatus } from "../cli/commands/status.js";
@@ -127,121 +100,6 @@ import {
   handlePhaseTickets,
   handlePhaseCreate,
 } from "../cli/commands/phase.js";
-
-// --- Error classification ---
-
-/** Infrastructure error codes that warrant isError: true on MCP results. */
-const INFRASTRUCTURE_ERROR_CODES: readonly string[] = [
-  "io_error",
-  "project_corrupt",
-  "version_mismatch",
-];
-
-
-/** Consistent error text format for all isError: true MCP responses. */
-function formatMcpError(code: string, message: string): string {
-  return `[${code}] ${message}`;
-}
-
-/**
- * Shared pipeline for all MCP read tools.
- *
- * 1. Load project (permissive mode)
- * 2. Build CommandContext with format: "md"
- * 3. Call handler
- * 4. Classify result via errorCode + INFRASTRUCTURE_ERROR_CODES
- * 5. Prepend integrity warning notice if warnings present
- */
-export async function runMcpReadTool(
-  pinnedRoot: string,
-  handler: (ctx: CommandContext) => Promise<CommandResult> | CommandResult,
-  effectiveRoot?: string,
-): Promise<McpToolResult> {
-  // Liveness is always anchored to pinnedRoot (the orchestrator), not the effective node root.
-  try { touchMcpLiveness(pinnedRoot); } catch { /* best-effort */ }
-  const loadRoot = effectiveRoot ?? pinnedRoot;
-  try {
-    const { state, warnings } = await loadProject(loadRoot);
-    const handoversDir = join(loadRoot, ".story", "handovers");
-    const ctx: CommandContext = { state, warnings, root: loadRoot, handoversDir, format: "md" };
-
-    const result = await handler(ctx);
-
-    // Classify: infrastructure errorCode → isError: true
-    if (result.errorCode && INFRASTRUCTURE_ERROR_CODES.includes(result.errorCode)) {
-      return {
-        content: [{ type: "text", text: formatMcpError(result.errorCode, result.output) }],
-        isError: true,
-      };
-    }
-
-    // Build output with optional integrity warning prefix. Surface the
-    // specific offenders (file path + message) so the user or agent can
-    // investigate immediately instead of having to re-run
-    // storybloq_validate. C3 phantom-ticket cases (e.g. a stray T-052
-    // file from an interrupted session) will name themselves here.
-    let text = result.output;
-    const integrityWarnings = warnings.filter((w) =>
-      (INTEGRITY_WARNING_TYPES as readonly string[]).includes(w.type),
-    );
-    if (integrityWarnings.length > 0) {
-      const details = integrityWarnings
-        .slice(0, 5)
-        .map((w) => `  - ${w.file}: ${w.message}`)
-        .join("\n");
-      const more = integrityWarnings.length > 5
-        ? `\n  ... and ${integrityWarnings.length - 5} more. Run storybloq_validate for the full list.`
-        : "";
-      text = `Warning: ${integrityWarnings.length} item(s) skipped due to data integrity issues:\n${details}${more}\n\n${text}`;
-    }
-
-    return { content: [{ type: "text", text }] };
-  } catch (err: unknown) {
-    if (err instanceof ProjectLoaderError) {
-      return { content: [{ type: "text", text: formatMcpError(err.code, err.message) }], isError: true };
-    }
-    if (err instanceof CliValidationError) {
-      return { content: [{ type: "text", text: formatMcpError(err.code, err.message) }], isError: true };
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    return { content: [{ type: "text", text: formatMcpError("io_error", message) }], isError: true };
-  }
-}
-
-/**
- * Shared pipeline for MCP write tools.
- * Mirrors runMcpReadTool but uses pinnedRoot with withProjectLock for atomicity.
- * The handler receives (root, format) and manages locking internally.
- */
-export async function runMcpWriteTool(
-  pinnedRoot: string,
-  handler: (root: string, format: "md") => Promise<CommandResult>,
-  effectiveRoot?: string,
-): Promise<McpToolResult> {
-  try { touchMcpLiveness(pinnedRoot); } catch { /* best-effort */ }
-  const writeRoot = effectiveRoot ?? pinnedRoot;
-  try {
-    const result = await handler(writeRoot, "md");
-
-    if (result.errorCode && INFRASTRUCTURE_ERROR_CODES.includes(result.errorCode)) {
-      return {
-        content: [{ type: "text", text: formatMcpError(result.errorCode, result.output) }],
-        isError: true,
-      };
-    }
-
-    return { content: [{ type: "text", text: result.output }] };
-  } catch (err: unknown) {
-    if (err instanceof ProjectLoaderError) {
-      return { content: [{ type: "text", text: formatMcpError(err.code, err.message) }], isError: true };
-    }
-    if (err instanceof CliValidationError) {
-      return { content: [{ type: "text", text: formatMcpError(err.code, err.message) }], isError: true };
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    return { content: [{ type: "text", text: formatMcpError("io_error", message) }], isError: true };
-  }
-}
 
 // --- Tool registration ---
 

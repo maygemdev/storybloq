@@ -3169,7 +3169,7 @@ export function registerSetupCommand(yargs: Argv): Argv {
         .option("client", {
           type: "string",
           default: "all",
-          choices: ["claude", "codex", "all"] as const,
+          choices: ["claude", "codex", "pi", "all"] as const,
           description: "Client to configure",
         })
         .option("skip-hooks", {
