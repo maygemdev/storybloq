@@ -1,7 +1,7 @@
 import { mkdir, writeFile, readFile, readdir, copyFile, rm, rename, unlink } from "node:fs/promises";
 import { existsSync, accessSync, readdirSync, constants as fsConstants } from "node:fs";
 import { join, dirname, delimiter as pathDelimiter } from "node:path";
-import { homedir } from "node:os";
+import { homedir, userInfo } from "node:os";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -185,10 +185,24 @@ function candidatePaths(): string[] {
 
   list.push(
     join(home, ".local", "bin", "storybloq"),
-    "/usr/local/bin/storybloq",
-    "/opt/homebrew/bin/storybloq",
     join(home, ".npm-global", "bin", "storybloq"),
   );
+
+  // When HOME is intentionally redirected (tests, service sandboxes, or
+  // temporary profiles), do not leak out to machine-global installations.
+  // PATH probing above still wins for callers that explicitly expose one.
+  let accountHome: string | null = null;
+  try {
+    accountHome = userInfo().homedir;
+  } catch {
+    accountHome = null;
+  }
+  if (!accountHome || home === accountHome) {
+    list.push(
+      "/usr/local/bin/storybloq",
+      "/opt/homebrew/bin/storybloq",
+    );
+  }
 
   const nvmVersions = join(home, ".nvm", "versions", "node");
   try {

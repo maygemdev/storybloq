@@ -15,6 +15,7 @@ const FAILED_DIR = ".failed";
 const MAX_INBOX_DEPTH = 50;
 const MAX_FAILED_FILES = 20;
 const DEBOUNCE_MS = 100;
+const POLL_INTERVAL_MS = 500;
 const MAX_PERMISSION_RETRIES = 15;
 const MAX_EVENT_RETRIES = 30;
 const EVENT_EXPIRY_MS = 60_000; // 60s -- drop events older than this
@@ -36,6 +37,7 @@ export async function startInboxWatcher(root: string, server: McpServer): Promis
     watcher.close();
     watcher = null;
     permissionRetryCount.clear();
+    eventRetryCount.clear();
   }
 
   // Ensure inbox directory exists
@@ -87,6 +89,7 @@ export function stopInboxWatcher(): void {
     pollInterval = null;
   }
   permissionRetryCount.clear();
+  eventRetryCount.clear();
 }
 
 // MARK: - Debounce
@@ -108,12 +111,16 @@ let pollInterval: ReturnType<typeof setInterval> | null = null;
 
 function startPollingFallback(inboxPath: string, server: McpServer): void {
   if (pollInterval) return;
+  processInbox(inboxPath, server).catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`storybloq: poll processing error: ${msg}\n`);
+  });
   pollInterval = setInterval(() => {
     processInbox(inboxPath, server).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       process.stderr.write(`storybloq: poll processing error: ${msg}\n`);
     });
-  }, 2000);
+  }, POLL_INTERVAL_MS);
 }
 
 // MARK: - Stale Processing Recovery (startup only)

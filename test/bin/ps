@@ -1,0 +1,68 @@
+#!/usr/bin/env node
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+const SENTINEL = "CLAUDESTORY_SIDECAR_V1";
+const MAX_AGE_MS = 5_000;
+
+function readNumber(path) {
+  try {
+    const value = Number(readFileSync(path, "utf-8").trim());
+    return Number.isInteger(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function processExists(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readIdentity(path) {
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf-8"));
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!Number.isInteger(parsed.pid) || parsed.pid <= 0) return null;
+    if (parsed.sentinel !== SENTINEL) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function maybePrintTelemetry(telemetryDir) {
+  const pid = readNumber(join(telemetryDir, "sidecar.pid"));
+  if (pid === null) return;
+  const identity = readIdentity(join(telemetryDir, "sidecar.identity"));
+  if (!identity || identity.pid !== pid) return;
+  const alive = readNumber(join(telemetryDir, "alive"));
+  if (alive === null || Date.now() - alive > MAX_AGE_MS) return;
+  if (!processExists(pid)) return;
+  const uid = typeof process.getuid === "function" ? process.getuid() : 0;
+  const ppid = Number.isInteger(identity.ppid) && identity.ppid > 0 ? identity.ppid : 1;
+  console.log(`${uid} ${pid} ${ppid} 0 00:00 ?? 0:00.00 node -e // ${SENTINEL} ${telemetryDir}`);
+}
+
+function scanTmpRoot() {
+  let entries = [];
+  try {
+    entries = readdirSync(tmpdir(), { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^t283(?:-c)?-/.test(entry.name)) continue;
+    const telemetryDir = join(tmpdir(), entry.name, "telemetry");
+    if (existsSync(telemetryDir)) maybePrintTelemetry(telemetryDir);
+  }
+}
+
+console.log("UID PID PPID C STIME TTY TIME CMD");
+scanTmpRoot();

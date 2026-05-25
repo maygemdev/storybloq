@@ -6,12 +6,15 @@ import { fileURLToPath } from "node:url";
 
 const LOCK_BASENAME = "sidecar.lock";
 const PID_BASENAME = "sidecar.pid";
+const IDENTITY_BASENAME = "sidecar.identity";
 const ACQUIRE_DEADLINE_MS = 2_000;
 const ACQUIRE_POLL_MS = 25;
 const STALENESS_FLOOR_MS = 5_000;
 const UNREADABLE_BREAK_MS = 10 * STALENESS_FLOOR_MS;
 const KILL_GRACE_MS = 500;
 const KILL_POLL_MS = 50;
+const SIDECAR_EVIDENCE_GRACE_MS = 350;
+const SIDECAR_EVIDENCE_FRESH_MS = 5_000;
 const LOCK_MAX_BYTES = 4_096;
 const CMDLINE_MAX_BYTES = 128 * 1024;
 const SIDECAR_SENTINEL = "CLAUDESTORY_SIDECAR_V1";
@@ -29,15 +32,22 @@ interface LockBody { pid: number; token: string; acquiredAt: number; }
 interface LockHandle { token: string; lockPath: string; tmpPath: string; lockIno: number | null; }
 type LockState = "holder-alive" | "holder-grace" | "holder-dead" | "unreadable";
 interface LockInspection { state: LockState; ino: number | null; token: string | null; }
+interface SidecarRecord { tDir: string; child: ReturnType<typeof spawn>; }
+interface SidecarIdentity { pid: number; ppid: number | null; sentinel: string; }
+
+const spawnedSidecarsByPid = new Map<number, SidecarRecord>();
 
 const SIDECAR_SCRIPT = [
   `// ${SIDECAR_SENTINEL}`,
   'const fs=require("fs"),path=require("path");',
   "const dir=process.argv[1],ms=+process.argv[2],ppid=process.ppid;",
-  'const alive=path.join(dir,"alive"),shut=path.join(dir,"shutdown");',
+  'const alive=path.join(dir,"alive"),id=path.join(dir,"sidecar.identity"),shut=path.join(dir,"shutdown");',
+  `const sentinel=${JSON.stringify(SIDECAR_SENTINEL)};`,
+  "const writeId=()=>{try{fs.writeFileSync(id,JSON.stringify({pid:process.pid,ppid,sentinel}))}catch{}};",
   "const tick=()=>{",
   "  if(process.ppid!==ppid){try{fs.writeFileSync(alive,\"0\")}catch{}process.exit(0)}",
   "  if(fs.existsSync(shut)){try{fs.writeFileSync(alive,\"0\")}catch{}process.exit(0)}",
+  "  writeId();",
   "  try{fs.writeFileSync(alive,String(Date.now()))}catch{}",
   "};",
   "tick();setInterval(tick,ms);",
@@ -90,6 +100,70 @@ function isSelfPid(pid: number): boolean {
   return pid === process.pid || pid === process.ppid || pid === 1;
 }
 
+function isLivePid(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function readSidecarIdentity(tDir: string): SidecarIdentity | null {
+  let fd: number;
+  try { fd = fs.openSync(join(tDir, IDENTITY_BASENAME), fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW); }
+  catch { return null; }
+  try {
+    const st = fs.fstatSync(fd);
+    if (!st.isFile()) return null;
+    const myUid = getOurUid();
+    if (myUid >= 0 && st.uid !== myUid) return null;
+    if (st.size > LOCK_MAX_BYTES || st.size < 0) return null;
+    const buf = Buffer.alloc(Math.min(st.size || 0, LOCK_MAX_BYTES));
+    if (buf.length > 0) fs.readSync(fd, buf, 0, buf.length, 0);
+    const parsed = JSON.parse(buf.toString("utf-8")) as Partial<SidecarIdentity>;
+    if (!Number.isInteger(parsed.pid) || parsed.pid! <= 0) return null;
+    if (parsed.sentinel !== SIDECAR_SENTINEL) return null;
+    const ppid = Number.isInteger(parsed.ppid) && parsed.ppid! > 0 ? parsed.ppid! : null;
+    return { pid: parsed.pid!, ppid, sentinel: parsed.sentinel };
+  } catch {
+    return null;
+  } finally {
+    try { fs.closeSync(fd); } catch { /* ignore */ }
+  }
+}
+
+function readAliveTimestampFromTelemetryDir(tDir: string): number | null {
+  if (fs.existsSync(join(tDir, "shutdown"))) return null;
+  try {
+    const n = Number(fs.readFileSync(join(tDir, "alive"), "utf-8").trim());
+    return n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function hasRecentSidecarEvidence(pid: number, tDir: string): boolean {
+  if (!Number.isInteger(pid) || pid <= 0 || isSelfPid(pid)) return false;
+  if (!isLivePid(pid)) return false;
+  const identity = readSidecarIdentity(tDir);
+  if (!identity || identity.pid !== pid) return false;
+  const alive = readAliveTimestampFromTelemetryDir(tDir);
+  if (alive === null) return false;
+  const now = Date.now();
+  return alive <= now + 1_000 && now - alive <= SIDECAR_EVIDENCE_FRESH_MS;
+}
+
+function waitForSidecarEvidence(pid: number, tDir: string, timeoutMs = SIDECAR_EVIDENCE_GRACE_MS): boolean {
+  const deadline = Date.now() + timeoutMs;
+  do {
+    if (hasSidecarSignatureFromProcessTable(pid) || hasRecentSidecarEvidence(pid, tDir)) return true;
+    if (!isLivePid(pid)) return false;
+    sleepMs(Math.min(ACQUIRE_POLL_MS, Math.max(0, deadline - Date.now())));
+  } while (Date.now() < deadline);
+  return hasSidecarSignatureFromProcessTable(pid) || hasRecentSidecarEvidence(pid, tDir);
+}
+
 function getProcessPpid(pid: number): number | null {
   if (!Number.isInteger(pid) || pid <= 0) return null;
   try {
@@ -114,7 +188,7 @@ function getProcessPpid(pid: number): number | null {
   return null;
 }
 
-function hasSidecarSignature(pid: number): boolean {
+function hasSidecarSignatureFromProcessTable(pid: number): boolean {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
     if (process.platform === "darwin") {
@@ -156,6 +230,17 @@ function hasSidecarSignature(pid: number): boolean {
   } catch {
     return false;
   }
+}
+
+function hasSidecarSignature(pid: number): boolean {
+  if (hasSidecarSignatureFromProcessTable(pid)) return true;
+  const record = spawnedSidecarsByPid.get(pid);
+  if (!record) return false;
+  if (record.child.exitCode !== null || record.child.signalCode !== null) {
+    spawnedSidecarsByPid.delete(pid);
+    return false;
+  }
+  return isLivePid(pid);
 }
 
 function waitForExit(pid: number, deadlineMs: number, signatureGuard: () => boolean): "exited" | "timeout" | "lost-signature" {
@@ -503,7 +588,23 @@ function killJustSpawnedChild(pid: number): void {
   }
 }
 
+function killKnownChild(pid: number): boolean {
+  const record = spawnedSidecarsByPid.get(pid);
+  if (!record) return false;
+  try { record.child.kill("SIGTERM"); }
+  catch (e: any) {
+    if (e && e.code === "ESRCH") {
+      spawnedSidecarsByPid.delete(pid);
+      return true;
+    }
+    return false;
+  }
+  spawnedSidecarsByPid.delete(pid);
+  return true;
+}
+
 function killPriorSidecarImpl(priorPid: number): boolean {
+  if (killKnownChild(priorPid)) return true;
   const gate = safetyCheck(priorPid);
   if (gate !== "proceed") return true;
   const termResult = escalate(priorPid, "SIGTERM");
@@ -532,7 +633,7 @@ export function spawnAliveSidecar(tDir: string, intervalMs = 10_000): number | n
     const existing = readSidecarPid(tDir);
     if (existing === null) return null;
     try { process.kill(existing, 0); } catch { return null; }
-    if (!hasSidecarSignature(existing)) return null;
+    if (!waitForSidecarEvidence(existing, tDir)) return null;
     return existing;
   }
 
@@ -540,17 +641,18 @@ export function spawnAliveSidecar(tDir: string, intervalMs = 10_000): number | n
   try {
     const priorPid = readSidecarPid(tDir);
     if (priorPid !== null) {
-      let priorAliveWithSignature = false;
-      try { process.kill(priorPid, 0); priorAliveWithSignature = hasSidecarSignature(priorPid); }
+      let priorAlive = false;
+      try { process.kill(priorPid, 0); priorAlive = true; }
       catch { /* dead or unreachable */ }
 
-      if (priorAliveWithSignature) {
+      if (priorAlive && waitForSidecarEvidence(priorPid, tDir)) {
         // Fail closed: only proceed if we can affirmatively confirm the prior
         // sidecar was spawned by us. A null ppid (ps/proc lookup transient
         // failure) is not evidence of ownership; killing would risk taking
         // down another session's sidecar.
         const priorPpid = getProcessPpid(priorPid);
-        if (priorPpid !== process.pid) {
+        const knownLocal = spawnedSidecarsByPid.has(priorPid);
+        if (priorPpid !== process.pid && !(priorPpid === null && knownLocal)) {
           livenessLog("prior-owned-by-other", { priorPid, priorPpid });
           return null;
         }
@@ -587,6 +689,10 @@ export function spawnAliveSidecar(tDir: string, intervalMs = 10_000): number | n
     const newPid = child.pid ?? null;
 
     if (newPid !== null) {
+      spawnedSidecarsByPid.set(newPid, { tDir, child });
+      child.once("exit", () => {
+        spawnedSidecarsByPid.delete(newPid);
+      });
       try {
         writeSidecarPid(tDir, newPid);
         spawnedPid = newPid;
@@ -596,6 +702,7 @@ export function spawnAliveSidecar(tDir: string, intervalMs = 10_000): number | n
         // the ps/proc table write for a freshly-forked child) and signal
         // it directly. SIGTERM, poll for exit, then SIGKILL if needed.
         killJustSpawnedChild(newPid);
+        spawnedSidecarsByPid.delete(newPid);
         return null;
       }
     }
@@ -660,14 +767,7 @@ export function readLastMcpCall(sessionDir: string): string | null {
 
 export function readAliveTimestamp(sessionDir: string): number | null {
   const tDir = telemetryDirPath(sessionDir);
-  if (fs.existsSync(join(tDir, "shutdown"))) return null;
-  try {
-    const val = fs.readFileSync(join(tDir, "alive"), "utf-8").trim();
-    const n = Number(val);
-    return n > 0 ? n : null;
-  } catch {
-    return null;
-  }
+  return readAliveTimestampFromTelemetryDir(tDir);
 }
 
 export function computeBinaryFingerprint(): {
