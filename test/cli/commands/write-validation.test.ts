@@ -34,22 +34,22 @@ function newErrors(pre: ProjectState, post: ProjectState): string[] {
   return result;
 }
 
-describe("ISS-065: Write-path multiset diff", () => {
+describe("TEST-ISS-065: Write-path multiset diff", () => {
   const phase = makePhase({ id: "p1" });
   const roadmap = makeRoadmap([phase]);
 
   it("pre-existing stale issue ref does NOT produce new error when writing unrelated ticket", () => {
     // Pre-state: ISS-001 has stale relatedTickets ref to T-999 (doesn't exist)
     const pre = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
-      issues: [makeIssue({ id: "ISS-001", relatedTickets: ["T-999"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", relatedTickets: ["TEST-T-999"] })],
       roadmap,
     });
 
     // Post-state: T-001 changed to inprogress (unrelated to ISS-001's stale ref)
     const post = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "inprogress" })],
-      issues: [makeIssue({ id: "ISS-001", relatedTickets: ["T-999"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "inprogress" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", relatedTickets: ["TEST-T-999"] })],
       roadmap,
     });
 
@@ -58,30 +58,30 @@ describe("ISS-065: Write-path multiset diff", () => {
 
   it("adding NEW stale blockedBy produces new error", () => {
     const pre = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", blockedBy: [] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: [] })],
       roadmap,
     });
 
     const post = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-888"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-888"] })],
       roadmap,
     });
 
     const errors = newErrors(pre, post);
     expect(errors.length).toBeGreaterThan(0);
-    expect(errors.some((e) => e.includes("T-888"))).toBe(true);
+    expect(errors.some((e) => e.includes("TEST-T-888"))).toBe(true);
   });
 
   it("duplicate stale ref increases multiset count", () => {
     // Pre: T-001 has one stale blockedBy
     const pre = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-999"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-999"] })],
       roadmap,
     });
 
     // Post: T-001 has two identical stale blockedBy
     const post = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-999", "T-999"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-999", "TEST-T-999"] })],
       roadmap,
     });
 
@@ -93,8 +93,8 @@ describe("ISS-065: Write-path multiset diff", () => {
     // Pre: T-001 is a regular ticket, T-002 blocks on T-001
     const pre = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }),
-        makeTicket({ id: "T-002", phase: "p1", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap,
     });
@@ -103,9 +103,9 @@ describe("ISS-065: Write-path multiset diff", () => {
     // T-002's blockedBy: [T-001] now triggers blocked_by_umbrella
     const post = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }),
-        makeTicket({ id: "T-002", phase: "p1", blockedBy: ["T-001"] }),
-        makeTicket({ id: "T-003", phase: "p1", parentTicket: "T-001" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", blockedBy: ["TEST-T-001"] }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", parentTicket: "TEST-T-001" }),
       ],
       roadmap,
     });
@@ -116,8 +116,8 @@ describe("ISS-065: Write-path multiset diff", () => {
 
   it("same errors pre/post means empty diff", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-999"] })],
-      issues: [makeIssue({ id: "ISS-001", relatedTickets: ["T-888"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-999"] })],
+      issues: [makeIssue({ id: "TEST-ISS-001", relatedTickets: ["TEST-T-888"] })],
       roadmap,
     });
 
@@ -127,14 +127,14 @@ describe("ISS-065: Write-path multiset diff", () => {
 
   it("pre-existing stale issue phase does not block ticket write", () => {
     const pre = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
-      issues: [makeIssue({ id: "ISS-001", phase: "nonexistent" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", phase: "nonexistent" })],
       roadmap,
     });
 
     const post = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
-      issues: [makeIssue({ id: "ISS-001", phase: "nonexistent" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", phase: "nonexistent" })],
       roadmap,
     });
 

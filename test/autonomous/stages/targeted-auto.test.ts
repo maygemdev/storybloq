@@ -107,48 +107,48 @@ describe("getRemainingTargets", () => {
   });
 
   it("returns all targets when nothing is done", () => {
-    const state = makeSessionState({ targetWork: ["T-001", "T-002", "ISS-001"] });
-    expect(getRemainingTargets(state)).toEqual(["T-001", "T-002", "ISS-001"]);
+    const state = makeSessionState({ targetWork: ["TEST-T-001", "TEST-T-002", "TEST-ISS-001"] });
+    expect(getRemainingTargets(state)).toEqual(["TEST-T-001", "TEST-T-002", "TEST-ISS-001"]);
   });
 
   it("filters out completed tickets (handles object type)", () => {
     const state = makeSessionState({
-      targetWork: ["T-001", "T-002", "T-003"],
-      completedTickets: [{ id: "T-001", title: "Done ticket" }],
+      targetWork: ["TEST-T-001", "TEST-T-002", "TEST-T-003"],
+      completedTickets: [{ id: "TEST-T-001", title: "Done ticket" }],
     });
-    expect(getRemainingTargets(state)).toEqual(["T-002", "T-003"]);
+    expect(getRemainingTargets(state)).toEqual(["TEST-T-002", "TEST-T-003"]);
   });
 
   it("filters out resolved issues (handles string type)", () => {
     const state = makeSessionState({
-      targetWork: ["T-001", "ISS-001", "ISS-002"],
-      resolvedIssues: ["ISS-001"],
+      targetWork: ["TEST-T-001", "TEST-ISS-001", "TEST-ISS-002"],
+      resolvedIssues: ["TEST-ISS-001"],
     });
-    expect(getRemainingTargets(state)).toEqual(["T-001", "ISS-002"]);
+    expect(getRemainingTargets(state)).toEqual(["TEST-T-001", "TEST-ISS-002"]);
   });
 
   it("handles mixed ticket + issue completion", () => {
     const state = makeSessionState({
-      targetWork: ["T-001", "ISS-001", "T-002", "ISS-002"],
-      completedTickets: [{ id: "T-001" }],
-      resolvedIssues: ["ISS-002"],
+      targetWork: ["TEST-T-001", "TEST-ISS-001", "TEST-T-002", "TEST-ISS-002"],
+      completedTickets: [{ id: "TEST-T-001" }],
+      resolvedIssues: ["TEST-ISS-002"],
     });
-    expect(getRemainingTargets(state)).toEqual(["ISS-001", "T-002"]);
+    expect(getRemainingTargets(state)).toEqual(["TEST-ISS-001", "TEST-T-002"]);
   });
 
   it("preserves targetWork order", () => {
     const state = makeSessionState({
-      targetWork: ["ISS-002", "T-003", "T-001"],
-      completedTickets: [{ id: "T-003" }],
+      targetWork: ["TEST-ISS-002", "TEST-T-003", "TEST-T-001"],
+      completedTickets: [{ id: "TEST-T-003" }],
     });
-    expect(getRemainingTargets(state)).toEqual(["ISS-002", "T-001"]);
+    expect(getRemainingTargets(state)).toEqual(["TEST-ISS-002", "TEST-T-001"]);
   });
 
   it("returns empty when all targets are done", () => {
     const state = makeSessionState({
-      targetWork: ["T-001", "ISS-001"],
-      completedTickets: [{ id: "T-001" }],
-      resolvedIssues: ["ISS-001"],
+      targetWork: ["TEST-T-001", "TEST-ISS-001"],
+      completedTickets: [{ id: "TEST-T-001" }],
+      resolvedIssues: ["TEST-ISS-001"],
     });
     expect(getRemainingTargets(state)).toEqual([]);
   });
@@ -161,83 +161,83 @@ describe("getRemainingTargets", () => {
 describe("stuck detection (firstReady-based)", () => {
   it("not stuck when open issue targets remain", () => {
     const ps = makeProjectState({
-      tickets: [makeTicket({ id: "T-001", blockedBy: ["T-999"] })],
-      issues: [makeIssue({ id: "ISS-001", severity: "high" })],
+      tickets: [makeTicket({ id: "TEST-T-001", blockedBy: ["TEST-T-999"] })],
+      issues: [makeIssue({ id: "TEST-ISS-001", severity: "high" })],
     });
-    const { firstReady } = buildTargetedCandidatesText(["T-001", "ISS-001"], ps);
+    const { firstReady } = buildTargetedCandidatesText(["TEST-T-001", "TEST-ISS-001"], ps);
     expect(firstReady).not.toBeNull();
   });
 
   it("stuck when all targets are blocked by external items", () => {
     const ps = makeProjectState({
       tickets: [
-        makeTicket({ id: "T-001", blockedBy: ["T-999"] }),
-        makeTicket({ id: "T-002", blockedBy: ["T-888"] }),
+        makeTicket({ id: "TEST-T-001", blockedBy: ["TEST-T-999"] }),
+        makeTicket({ id: "TEST-T-002", blockedBy: ["TEST-T-888"] }),
       ],
     });
-    const { firstReady } = buildTargetedCandidatesText(["T-001", "T-002"], ps);
+    const { firstReady } = buildTargetedCandidatesText(["TEST-T-001", "TEST-T-002"], ps);
     expect(firstReady).toBeNull();
   });
 
   it("not stuck when a blocker is in the target list and unblocked", () => {
     const ps = makeProjectState({
       tickets: [
-        makeTicket({ id: "T-001" }),
-        makeTicket({ id: "T-002", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-002", blockedBy: ["TEST-T-001"] }),
       ],
     });
-    const { firstReady } = buildTargetedCandidatesText(["T-001", "T-002"], ps);
-    expect(firstReady).toEqual({ id: "T-001", kind: "ticket" });
+    const { firstReady } = buildTargetedCandidatesText(["TEST-T-001", "TEST-T-002"], ps);
+    expect(firstReady).toEqual({ id: "TEST-T-001", kind: "ticket" });
   });
 
   it("stuck when mutual-blocking cycle (T-001 blocks T-002, T-002 blocks T-001)", () => {
     const ps = makeProjectState({
       tickets: [
-        makeTicket({ id: "T-001", blockedBy: ["T-002"] }),
-        makeTicket({ id: "T-002", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", blockedBy: ["TEST-T-002"] }),
+        makeTicket({ id: "TEST-T-002", blockedBy: ["TEST-T-001"] }),
       ],
     });
-    const { firstReady } = buildTargetedCandidatesText(["T-001", "T-002"], ps);
+    const { firstReady } = buildTargetedCandidatesText(["TEST-T-001", "TEST-T-002"], ps);
     expect(firstReady).toBeNull();
   });
 
   it("stuck when target ticket is missing from project", () => {
     const ps = makeProjectState({ tickets: [] });
-    const { firstReady } = buildTargetedCandidatesText(["T-999"], ps);
+    const { firstReady } = buildTargetedCandidatesText(["TEST-T-999"], ps);
     expect(firstReady).toBeNull();
   });
 
   it("stuck when target ticket was completed externally", () => {
     const ps = makeProjectState({
-      tickets: [makeTicket({ id: "T-001", status: "complete" })],
+      tickets: [makeTicket({ id: "TEST-T-001", status: "complete" })],
     });
-    const { firstReady } = buildTargetedCandidatesText(["T-001"], ps);
+    const { firstReady } = buildTargetedCandidatesText(["TEST-T-001"], ps);
     expect(firstReady).toBeNull();
   });
 
   it("stuck when target issue was resolved externally", () => {
     const ps = makeProjectState({
-      issues: [makeIssue({ id: "ISS-001", status: "resolved" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", status: "resolved" })],
     });
-    const { firstReady } = buildTargetedCandidatesText(["ISS-001"], ps);
+    const { firstReady } = buildTargetedCandidatesText(["TEST-ISS-001"], ps);
     expect(firstReady).toBeNull();
   });
 
   it("stuck when target issue is missing from project", () => {
     const ps = makeProjectState({ issues: [] });
-    const { firstReady } = buildTargetedCandidatesText(["ISS-999"], ps);
+    const { firstReady } = buildTargetedCandidatesText(["TEST-ISS-999"], ps);
     expect(firstReady).toBeNull();
   });
 
   it("not stuck with mix of resolved and open issues", () => {
     const ps = makeProjectState({
       issues: [
-        makeIssue({ id: "ISS-001", status: "resolved" }),
-        makeIssue({ id: "ISS-002", status: "open" }),
+        makeIssue({ id: "TEST-ISS-001", status: "resolved" }),
+        makeIssue({ id: "TEST-ISS-002", status: "open" }),
       ],
     });
-    const { firstReady } = buildTargetedCandidatesText(["ISS-001", "ISS-002"], ps);
-    expect(firstReady).toEqual({ id: "ISS-002", kind: "issue" });
+    const { firstReady } = buildTargetedCandidatesText(["TEST-ISS-001", "TEST-ISS-002"], ps);
+    expect(firstReady).toEqual({ id: "TEST-ISS-002", kind: "issue" });
   });
 });
 
@@ -249,29 +249,29 @@ describe("buildTargetedCandidatesText", () => {
   it("shows type, severity, and blocked status", () => {
     const ps = makeProjectState({
       tickets: [
-        makeTicket({ id: "T-001", title: "Ready task" }),
-        makeTicket({ id: "T-002", title: "Blocked task", blockedBy: ["T-999"] }),
+        makeTicket({ id: "TEST-T-001", title: "Ready task" }),
+        makeTicket({ id: "TEST-T-002", title: "Blocked task", blockedBy: ["TEST-T-999"] }),
       ],
-      issues: [makeIssue({ id: "ISS-001", title: "Open issue", severity: "high" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", title: "Open issue", severity: "high" })],
     });
-    const { text, firstReady } = buildTargetedCandidatesText(["T-001", "T-002", "ISS-001"], ps);
+    const { text, firstReady } = buildTargetedCandidatesText(["TEST-T-001", "TEST-T-002", "TEST-ISS-001"], ps);
 
-    expect(text).toContain("T-001: Ready task");
+    expect(text).toContain("TEST-T-001: Ready task");
     expect(text).toContain("(task) -- ready");
-    expect(text).toContain("T-002: Blocked task");
-    expect(text).toContain("blocked by T-999");
-    expect(text).toContain("ISS-001: Open issue");
+    expect(text).toContain("TEST-T-002: Blocked task");
+    expect(text).toContain("blocked by TEST-T-999");
+    expect(text).toContain("TEST-ISS-001: Open issue");
     expect(text).toContain("(issue, high)");
-    expect(firstReady).toEqual({ id: "T-001", kind: "ticket" });
+    expect(firstReady).toEqual({ id: "TEST-T-001", kind: "ticket" });
   });
 
   it("firstReady is an issue when all tickets are blocked", () => {
     const ps = makeProjectState({
-      tickets: [makeTicket({ id: "T-001", title: "Blocked", blockedBy: ["T-999"] })],
-      issues: [makeIssue({ id: "ISS-001", title: "Ready issue", severity: "medium" })],
+      tickets: [makeTicket({ id: "TEST-T-001", title: "Blocked", blockedBy: ["TEST-T-999"] })],
+      issues: [makeIssue({ id: "TEST-ISS-001", title: "Ready issue", severity: "medium" })],
     });
-    const { firstReady } = buildTargetedCandidatesText(["T-001", "ISS-001"], ps);
-    expect(firstReady).toEqual({ id: "ISS-001", kind: "issue" });
+    const { firstReady } = buildTargetedCandidatesText(["TEST-T-001", "TEST-ISS-001"], ps);
+    expect(firstReady).toEqual({ id: "TEST-ISS-001", kind: "issue" });
   });
 });
 
@@ -283,21 +283,21 @@ describe("PICK_TICKET enter() targeted mode", () => {
   it("shows only target items when targetWork is set", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Target ticket", status: "open", phase: "p1" },
-        { id: "T-002", title: "Non-target ticket", status: "open", phase: "p1" },
+        { id: "TEST-T-001", title: "Target ticket", status: "open", phase: "p1" },
+        { id: "TEST-T-002", title: "Non-target ticket", status: "open", phase: "p1" },
       ],
-      issues: [{ id: "ISS-001", title: "Target issue", status: "open", severity: "high" }],
+      issues: [{ id: "TEST-ISS-001", title: "Target issue", status: "open", severity: "high" }],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
-    const state = makeSessionState({ targetWork: ["T-001", "ISS-001"] });
+    const state = makeSessionState({ targetWork: ["TEST-T-001", "TEST-ISS-001"] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
 
     expect(result).not.toHaveProperty("target");
-    expect(result.instruction).toContain("T-001");
-    expect(result.instruction).toContain("ISS-001");
-    expect(result.instruction).not.toContain("T-002");
+    expect(result.instruction).toContain("TEST-T-001");
+    expect(result.instruction).toContain("TEST-ISS-001");
+    expect(result.instruction).not.toContain("TEST-T-002");
     expect(result.reminders).toBeDefined();
     expect(result.reminders!.some(r => r.includes("targeted auto mode"))).toBe(true);
   });
@@ -305,7 +305,7 @@ describe("PICK_TICKET enter() targeted mode", () => {
   it("falls through to standard mode when targetWork is empty", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Regular ticket", status: "open", phase: "p1" },
+        { id: "TEST-T-001", title: "Regular ticket", status: "open", phase: "p1" },
       ],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
@@ -314,19 +314,19 @@ describe("PICK_TICKET enter() targeted mode", () => {
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
 
-    expect(result.instruction).toContain("T-001");
+    expect(result.instruction).toContain("TEST-T-001");
     expect(result.reminders!.some(r => r.includes("targeted auto mode"))).toBe(false);
   });
 
   it("routes to COMPLETE when all targets are done", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-001", title: "Done ticket", status: "complete", phase: "p1" }],
+      tickets: [{ id: "TEST-T-001", title: "Done ticket", status: "complete", phase: "p1" }],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
     const state = makeSessionState({
-      targetWork: ["T-001"],
-      completedTickets: [{ id: "T-001" }],
+      targetWork: ["TEST-T-001"],
+      completedTickets: [{ id: "TEST-T-001" }],
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
@@ -336,12 +336,12 @@ describe("PICK_TICKET enter() targeted mode", () => {
   it("routes to HANDOVER with stuck explanation when all blocked by external", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Blocked", status: "open", phase: "p1", blockedBy: ["T-999"] },
+        { id: "TEST-T-001", title: "Blocked", status: "open", phase: "p1", blockedBy: ["TEST-T-999"] },
       ],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
-    const state = makeSessionState({ targetWork: ["T-001"] });
+    const state = makeSessionState({ targetWork: ["TEST-T-001"] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     expect(result).toHaveProperty("target", "HANDOVER");
@@ -353,13 +353,13 @@ describe("PICK_TICKET enter() targeted mode", () => {
   it("routes to HANDOVER with stuck explanation when mutual-blocking cycle", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Cycle A", status: "open", phase: "p1", blockedBy: ["T-002"] },
-        { id: "T-002", title: "Cycle B", status: "open", phase: "p1", blockedBy: ["T-001"] },
+        { id: "TEST-T-001", title: "Cycle A", status: "open", phase: "p1", blockedBy: ["TEST-T-002"] },
+        { id: "TEST-T-002", title: "Cycle B", status: "open", phase: "p1", blockedBy: ["TEST-T-001"] },
       ],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
-    const state = makeSessionState({ targetWork: ["T-001", "T-002"] });
+    const state = makeSessionState({ targetWork: ["TEST-T-001", "TEST-T-002"] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     expect(result).toHaveProperty("target", "HANDOVER");
@@ -377,55 +377,55 @@ describe("PICK_TICKET report() target enforcement", () => {
   it("rejects non-target ticket pick", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Target", status: "open", phase: "p1" },
-        { id: "T-002", title: "Non-target", status: "open", phase: "p1" },
+        { id: "TEST-T-001", title: "Target", status: "open", phase: "p1" },
+        { id: "TEST-T-002", title: "Non-target", status: "open", phase: "p1" },
       ],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
-    const state = makeSessionState({ targetWork: ["T-001"] });
+    const state = makeSessionState({ targetWork: ["TEST-T-001"] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-002" });
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-002" });
     expect(result.action).toBe("retry");
     expect(result.instruction).toContain("not a remaining target");
   });
 
   it("accepts target ticket pick and produces plan instruction", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-001", title: "Target", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-001", title: "Target", status: "open", phase: "p1" }],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
-    const state = makeSessionState({ targetWork: ["T-001"] });
+    const state = makeSessionState({ targetWork: ["TEST-T-001"] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-001" });
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-001" });
     expect(result.action).toBe("advance");
     const instruction = (result as any).result?.instruction ?? "";
-    expect(instruction).toContain("T-001");
+    expect(instruction).toContain("TEST-T-001");
     expect(instruction).toContain("plan_written");
   });
 
   it("accepts inprogress issue pick in targeted mode", async () => {
     setupProject(testRoot, {
-      issues: [{ id: "ISS-001", title: "InProgress issue", status: "inprogress", severity: "high" }],
+      issues: [{ id: "TEST-ISS-001", title: "InProgress issue", status: "inprogress", severity: "high" }],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
-    const state = makeSessionState({ targetWork: ["ISS-001"] });
+    const state = makeSessionState({ targetWork: ["TEST-ISS-001"] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
-    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-001" });
+    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-001" });
     expect(result.action).toBe("goto");
   });
 
   it("rejects inprogress issue pick in standard mode", async () => {
     setupProject(testRoot, {
-      issues: [{ id: "ISS-001", title: "InProgress issue", status: "inprogress", severity: "high" }],
+      issues: [{ id: "TEST-ISS-001", title: "InProgress issue", status: "inprogress", severity: "high" }],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
     const state = makeSessionState({ targetWork: [] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
-    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-001" });
+    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-001" });
     expect(result.action).toBe("retry");
     expect(result.instruction).toContain("inprogress");
   });
@@ -433,15 +433,15 @@ describe("PICK_TICKET report() target enforcement", () => {
   it("rejects non-target issue pick", async () => {
     setupProject(testRoot, {
       issues: [
-        { id: "ISS-001", title: "Target issue", status: "open", severity: "high" },
-        { id: "ISS-002", title: "Non-target issue", status: "open", severity: "low" },
+        { id: "TEST-ISS-001", title: "Target issue", status: "open", severity: "high" },
+        { id: "TEST-ISS-002", title: "Non-target issue", status: "open", severity: "low" },
       ],
     });
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
-    const state = makeSessionState({ targetWork: ["ISS-001"] });
+    const state = makeSessionState({ targetWork: ["TEST-ISS-001"] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
-    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-002" });
+    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-002" });
     expect(result.action).toBe("retry");
     expect(result.instruction).toContain("not a remaining target");
   });
@@ -454,15 +454,15 @@ describe("PICK_TICKET report() target enforcement", () => {
 describe("COMPLETE enter() targeted termination", () => {
   it("routes to HANDOVER when all targets done", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-001", title: "Done", status: "complete", phase: "p1" }],
+      tickets: [{ id: "TEST-T-001", title: "Done", status: "complete", phase: "p1" }],
     });
     const { CompleteStage } = await import("../../../src/autonomous/stages/complete.js");
     const stage = new CompleteStage();
     const state = makeSessionState({
       state: "COMPLETE",
-      targetWork: ["T-001", "ISS-001"],
-      completedTickets: [{ id: "T-001" }],
-      resolvedIssues: ["ISS-001"],
+      targetWork: ["TEST-T-001", "TEST-ISS-001"],
+      completedTickets: [{ id: "TEST-T-001" }],
+      resolvedIssues: ["TEST-ISS-001"],
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
@@ -472,60 +472,60 @@ describe("COMPLETE enter() targeted termination", () => {
   it("routes to PICK_TICKET when targets remain", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Done", status: "complete", phase: "p1" },
-        { id: "T-002", title: "Remaining", status: "open", phase: "p1" },
+        { id: "TEST-T-001", title: "Done", status: "complete", phase: "p1" },
+        { id: "TEST-T-002", title: "Remaining", status: "open", phase: "p1" },
       ],
     });
     const { CompleteStage } = await import("../../../src/autonomous/stages/complete.js");
     const stage = new CompleteStage();
     const state = makeSessionState({
       state: "COMPLETE",
-      targetWork: ["T-001", "T-002"],
-      completedTickets: [{ id: "T-001" }],
+      targetWork: ["TEST-T-001", "TEST-T-002"],
+      completedTickets: [{ id: "TEST-T-001" }],
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     expect(result).toHaveProperty("target", "PICK_TICKET");
-    expect((result as any).result?.instruction).toContain("T-002");
+    expect((result as any).result?.instruction).toContain("TEST-T-002");
   });
 
   it("shows targeted text and reminders in PICK_TICKET instruction", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Done", status: "complete", phase: "p1" },
-        { id: "T-002", title: "Next target", status: "open", phase: "p1" },
+        { id: "TEST-T-001", title: "Done", status: "complete", phase: "p1" },
+        { id: "TEST-T-002", title: "Next target", status: "open", phase: "p1" },
       ],
-      issues: [{ id: "ISS-001", title: "Target issue", status: "open", severity: "medium" }],
+      issues: [{ id: "TEST-ISS-001", title: "Target issue", status: "open", severity: "medium" }],
     });
     const { CompleteStage } = await import("../../../src/autonomous/stages/complete.js");
     const stage = new CompleteStage();
     const state = makeSessionState({
       state: "COMPLETE",
-      targetWork: ["T-001", "T-002", "ISS-001"],
-      completedTickets: [{ id: "T-001" }],
+      targetWork: ["TEST-T-001", "TEST-T-002", "TEST-ISS-001"],
+      completedTickets: [{ id: "TEST-T-001" }],
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     const instruction = (result as any).result?.instruction ?? "";
     const reminders = (result as any).result?.reminders ?? [];
-    expect(instruction).toContain("T-002: Next target");
-    expect(instruction).toContain("ISS-001: Target issue");
+    expect(instruction).toContain("TEST-T-002: Next target");
+    expect(instruction).toContain("TEST-ISS-001: Target issue");
     expect(reminders.some((r: string) => r.includes("targeted auto mode"))).toBe(true);
   });
 
   it("routes to HANDOVER when remaining targets are all blocked", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-001", title: "Done", status: "complete", phase: "p1" },
-        { id: "T-002", title: "Blocked", status: "open", phase: "p1", blockedBy: ["T-999"] },
+        { id: "TEST-T-001", title: "Done", status: "complete", phase: "p1" },
+        { id: "TEST-T-002", title: "Blocked", status: "open", phase: "p1", blockedBy: ["TEST-T-999"] },
       ],
     });
     const { CompleteStage } = await import("../../../src/autonomous/stages/complete.js");
     const stage = new CompleteStage();
     const state = makeSessionState({
       state: "COMPLETE",
-      targetWork: ["T-001", "T-002"],
-      completedTickets: [{ id: "T-001" }],
+      targetWork: ["TEST-T-001", "TEST-T-002"],
+      completedTickets: [{ id: "TEST-T-001" }],
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
@@ -537,7 +537,7 @@ describe("COMPLETE enter() targeted termination", () => {
 
   it("falls through to standard mode when targetWork is empty", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-001", title: "A ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-001", title: "A ticket", status: "open", phase: "p1" }],
     });
     const { CompleteStage } = await import("../../../src/autonomous/stages/complete.js");
     const stage = new CompleteStage();

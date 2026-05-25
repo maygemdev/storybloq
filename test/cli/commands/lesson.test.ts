@@ -177,7 +177,7 @@ describe("handleLessonCreate", () => {
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
     const result = await handleLessonCreate(
-      { title: "Test lesson", content: "Always test.", context: "T-133", source: "manual" },
+      { title: "Test lesson", content: "Always test.", context: "TEST-T-133", source: "manual" },
       "md", dir,
     );
     expect(result.output).toContain("Created lesson L-001");
@@ -196,11 +196,11 @@ describe("handleLessonCreate", () => {
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
     await handleLessonCreate(
-      { title: "First", content: "First lesson.", context: "T-001", source: "manual" },
+      { title: "First", content: "First lesson.", context: "TEST-T-001", source: "manual" },
       "md", dir,
     );
     const result = await handleLessonCreate(
-      { title: "Second", content: "Second lesson.", context: "T-002", source: "review" },
+      { title: "Second", content: "Second lesson.", context: "TEST-T-002", source: "review" },
       "md", dir,
     );
     expect(result.output).toContain("Created lesson L-002");
@@ -246,7 +246,7 @@ describe("handleLessonUpdate", () => {
   async function setupLesson(dir: string) {
     await initProject(dir, { name: "test" });
     await handleLessonCreate(
-      { title: "Original", content: "Original content.", context: "T-001", source: "manual", tags: ["alpha"] },
+      { title: "Original", content: "Original content.", context: "TEST-T-001", source: "manual", tags: ["alpha"] },
       "md", dir,
     );
   }
@@ -302,7 +302,7 @@ describe("handleLessonReinforce", () => {
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
     await handleLessonCreate(
-      { title: "Test", content: "Test.", context: "T-001", source: "manual" },
+      { title: "Test", content: "Test.", context: "TEST-T-001", source: "manual" },
       "md", dir,
     );
     const result = await handleLessonReinforce("L-001", "json", dir);
@@ -338,7 +338,7 @@ describe("handleLessonDelete", () => {
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
     await handleLessonCreate(
-      { title: "Doomed", content: "Gone.", context: "T-001", source: "manual" },
+      { title: "Doomed", content: "Gone.", context: "TEST-T-001", source: "manual" },
       "md", dir,
     );
     const result = await handleLessonDelete("L-001", "md", dir);
@@ -350,11 +350,11 @@ describe("handleLessonDelete", () => {
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
     await handleLessonCreate(
-      { title: "Original", content: "Old.", context: "T-001", source: "manual" },
+      { title: "Original", content: "Old.", context: "TEST-T-001", source: "manual" },
       "md", dir,
     );
     await handleLessonCreate(
-      { title: "Replacement", content: "New.", context: "T-002", source: "manual", supersedes: "L-001" },
+      { title: "Replacement", content: "New.", context: "TEST-T-002", source: "manual", supersedes: "L-001" },
       "md", dir,
     );
     await expect(

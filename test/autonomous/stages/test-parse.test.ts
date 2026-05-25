@@ -23,7 +23,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
     compactPending: false, compactPreparedAt: null, resumeBlocked: false,
     terminationReason: null, waitingForRetry: false, lastGuideCall: now, startedAt: now, guideCallCount: 5,
     config: { maxTicketsPerSession: 0, compactThreshold: "high", reviewBackends: ["codex", "agent"] },
-    ticket: { id: "T-001", title: "Test ticket", claimed: true },
+    ticket: { id: "TEST-T-001", title: "Test ticket", claimed: true },
     filedDeferrals: [], pendingDeferrals: [], deferralsUnfiled: false,
     ...overrides,
   } as FullSessionState;

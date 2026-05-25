@@ -41,7 +41,7 @@ function makeStateLike(overrides: Partial<FullSessionState>): FullSessionState {
   // need a full FullSessionState here.
   return {
     mode: "auto",
-    targetWork: ["ISS-1"],
+    targetWork: ["TEST-ISS-1"],
     lease: { expiresAt: new Date(Date.now() - 120 * 60 * 1000).toISOString() },
     ...overrides,
   } as unknown as FullSessionState;
@@ -119,9 +119,9 @@ describe("isFinishedOrphan with hoisted ctx (ISS-383)", () => {
       }),
     );
     writeFileSync(
-      join(story, "issues", "ISS-9001.json"),
+      join(story, "issues", "TEST-ISS-9001.json"),
       JSON.stringify({
-        id: "ISS-9001",
+        id: "TEST-ISS-9001",
         title: "Resolved fixture",
         status: "resolved",
         severity: "low",
@@ -155,7 +155,7 @@ describe("isFinishedOrphan with hoisted ctx (ISS-383)", () => {
     const state: FullSessionState = {
       ...session,
       mode: "auto",
-      targetWork: ["ISS-9001"],
+      targetWork: ["TEST-ISS-9001"],
       lease: { ...session.lease, expiresAt },
     };
     writeSessionSync(dir, state);
@@ -163,7 +163,7 @@ describe("isFinishedOrphan with hoisted ctx (ISS-383)", () => {
       rev: 1,
       type: "commit",
       timestamp: new Date().toISOString(),
-      data: { commitHash: head, issueId: "ISS-9001" },
+      data: { commitHash: head, issueId: "TEST-ISS-9001" },
     });
 
     return { root, dir, state };

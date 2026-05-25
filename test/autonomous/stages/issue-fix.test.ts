@@ -65,19 +65,19 @@ function setupProject(root: string): void {
     phases: [{ id: "p1", label: "P1", name: "Phase 1", description: "Test" }],
     blockers: [],
   }));
-  writeFileSync(join(storyDir, "tickets", "T-001.json"), JSON.stringify({
-    id: "T-001", title: "Test ticket", type: "task", status: "open",
+  writeFileSync(join(storyDir, "tickets", "TEST-T-001.json"), JSON.stringify({
+    id: "TEST-T-001", title: "Test ticket", type: "task", status: "open",
     phase: "p1", order: 10, description: "", createdDate: "2026-03-30",
     blockedBy: [], parentTicket: null,
   }));
-  writeFileSync(join(storyDir, "issues", "ISS-001.json"), JSON.stringify({
-    id: "ISS-001", title: "Critical bug", status: "open", severity: "critical",
+  writeFileSync(join(storyDir, "issues", "TEST-ISS-001.json"), JSON.stringify({
+    id: "TEST-ISS-001", title: "Critical bug", status: "open", severity: "critical",
     components: ["core"], impact: "App crashes on launch", resolution: null,
     location: ["src/index.ts:42"], discoveredDate: "2026-03-30", resolvedDate: null,
     relatedTickets: [],
   }));
-  writeFileSync(join(storyDir, "issues", "ISS-002.json"), JSON.stringify({
-    id: "ISS-002", title: "Low priority styling", status: "open", severity: "low",
+  writeFileSync(join(storyDir, "issues", "TEST-ISS-002.json"), JSON.stringify({
+    id: "TEST-ISS-002", title: "Low priority styling", status: "open", severity: "low",
     components: ["ui"], impact: "Button misaligned", resolution: null,
     location: [], discoveredDate: "2026-03-30", resolvedDate: null,
     relatedTickets: [],
@@ -138,7 +138,7 @@ describe("PICK_TICKET: issue surfacing", () => {
     if ("action" in result) throw new Error("Expected StageResult, got StageAdvance");
 
     // Should contain issue section with high/critical issues
-    expect(result.instruction).toContain("ISS-001"); // critical issue
+    expect(result.instruction).toContain("TEST-ISS-001"); // critical issue
     expect(result.instruction).toContain("Critical bug");
     expect(result.instruction).toContain("Open Issues");
   });
@@ -153,7 +153,7 @@ describe("PICK_TICKET: issue surfacing", () => {
     const result = await stage.enter(ctx);
     if ("action" in result) throw new Error("Expected StageResult, got StageAdvance");
 
-    expect(result.instruction).toContain("ISS-002"); // low severity now visible
+    expect(result.instruction).toContain("TEST-ISS-002"); // low severity now visible
     expect(result.instruction).toContain("medium/low");
   });
 
@@ -181,7 +181,7 @@ describe("PICK_TICKET: issue picking", () => {
     const state = makeState({ state: "PICK_TICKET" });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
-    const advance = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-001" });
+    const advance = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-001" });
     expect(advance.action).toBe("goto");
     expect((advance as { target: string }).target).toBe("ISSUE_FIX");
   });
@@ -192,9 +192,9 @@ describe("PICK_TICKET: issue picking", () => {
     const state = makeState({ state: "PICK_TICKET" });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
-    await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-001" });
+    await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-001" });
     expect(ctx.state.currentIssue).toBeDefined();
-    expect(ctx.state.currentIssue?.id).toBe("ISS-001");
+    expect(ctx.state.currentIssue?.id).toBe("TEST-ISS-001");
   });
 
   it("report() rejects nonexistent issueId", async () => {
@@ -203,14 +203,14 @@ describe("PICK_TICKET: issue picking", () => {
     const state = makeState({ state: "PICK_TICKET" });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
-    const advance = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-999" });
+    const advance = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-999" });
     expect(advance.action).toBe("retry");
   });
 
   it("report() rejects already-resolved issue", async () => {
     // Mark ISS-001 as resolved
-    writeFileSync(join(testRoot, ".story", "issues", "ISS-001.json"), JSON.stringify({
-      id: "ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
+    writeFileSync(join(testRoot, ".story", "issues", "TEST-ISS-001.json"), JSON.stringify({
+      id: "TEST-ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
       components: ["core"], impact: "App crashes", resolution: "Fixed", resolvedDate: "2026-03-30",
       discoveredDate: "2026-03-30", relatedTickets: [], location: [],
     }));
@@ -220,7 +220,7 @@ describe("PICK_TICKET: issue picking", () => {
     const state = makeState({ state: "PICK_TICKET" });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
-    const advance = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-001" });
+    const advance = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-001" });
     expect(advance.action).toBe("retry");
   });
 
@@ -230,7 +230,7 @@ describe("PICK_TICKET: issue picking", () => {
     const state = makeState({ state: "PICK_TICKET" });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
-    const advance = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-001" });
+    const advance = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-001" });
     // Should either advance (valid ticket) or retry (ticket validation) -- never goto ISSUE_FIX
     expect(advance.action).not.toBe("goto");
     if ("target" in advance) {
@@ -249,22 +249,22 @@ describe("ISSUE_FIX stage", () => {
     const stage = new IssueFixStage();
     const state = makeState({
       state: "ISSUE_FIX",
-      currentIssue: { id: "ISS-001", title: "Critical bug", severity: "critical" },
+      currentIssue: { id: "TEST-ISS-001", title: "Critical bug", severity: "critical" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
     const result = await stage.enter(ctx);
     if ("action" in result) throw new Error("Expected StageResult, got StageAdvance");
 
-    expect(result.instruction).toContain("ISS-001");
+    expect(result.instruction).toContain("TEST-ISS-001");
     expect(result.instruction).toContain("Critical bug");
     expect(result.instruction).toContain("issue_fixed");
   });
 
   it("report() with issue_fixed routes to FINALIZE via goto", async () => {
     // Mark the issue as resolved on disk
-    writeFileSync(join(testRoot, ".story", "issues", "ISS-001.json"), JSON.stringify({
-      id: "ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
+    writeFileSync(join(testRoot, ".story", "issues", "TEST-ISS-001.json"), JSON.stringify({
+      id: "TEST-ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
       components: ["core"], impact: "App crashes", resolution: "Fixed", resolvedDate: "2026-03-30",
       discoveredDate: "2026-03-30", relatedTickets: [], location: [],
     }));
@@ -273,7 +273,7 @@ describe("ISSUE_FIX stage", () => {
     const stage = new IssueFixStage();
     const state = makeState({
       state: "ISSUE_FIX",
-      currentIssue: { id: "ISS-001", title: "Critical bug", severity: "critical" },
+      currentIssue: { id: "TEST-ISS-001", title: "Critical bug", severity: "critical" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
@@ -287,7 +287,7 @@ describe("ISSUE_FIX stage", () => {
     const stage = new IssueFixStage();
     const state = makeState({
       state: "ISSUE_FIX",
-      currentIssue: { id: "ISS-001", title: "Critical bug", severity: "critical" },
+      currentIssue: { id: "TEST-ISS-001", title: "Critical bug", severity: "critical" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
 
@@ -318,7 +318,7 @@ describe("FINALIZE: issue-mode", () => {
     const stage = new FinalizeStage();
     const state = makeState({
       state: "FINALIZE",
-      currentIssue: { id: "ISS-001", title: "Critical bug", severity: "critical" },
+      currentIssue: { id: "TEST-ISS-001", title: "Critical bug", severity: "critical" },
       ticket: null,
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -326,7 +326,7 @@ describe("FINALIZE: issue-mode", () => {
     const result = await stage.enter(ctx);
     if ("action" in result) throw new Error("Expected StageResult, got StageAdvance");
 
-    expect(result.instruction).toContain("ISS-001");
+    expect(result.instruction).toContain("TEST-ISS-001");
     expect(result.instruction).toContain("resolved");
   });
 
@@ -335,12 +335,12 @@ describe("FINALIZE: issue-mode", () => {
     // We verify the session state shape includes resolvedIssues tracking.
     const state = makeState({
       state: "FINALIZE",
-      currentIssue: { id: "ISS-001", title: "Critical bug", severity: "critical" },
+      currentIssue: { id: "TEST-ISS-001", title: "Critical bug", severity: "critical" },
       ticket: null,
       resolvedIssues: [],
     });
     // Just verify the state fields exist and are typed correctly
-    expect(state.currentIssue?.id).toBe("ISS-001");
+    expect(state.currentIssue?.id).toBe("TEST-ISS-001");
     expect(state.resolvedIssues).toEqual([]);
   });
 });
@@ -356,8 +356,8 @@ describe("FINALIZE: issue-mode", () => {
 describe("COMPLETE: issue-aware routing", () => {
   it("routes to PICK_TICKET when no tickets remain but high issues exist", async () => {
     // Mark the only ticket as complete
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Test ticket", type: "task", status: "complete",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Test ticket", type: "task", status: "complete",
       phase: "p1", order: 10, description: "", createdDate: "2026-03-30",
       completedDate: "2026-03-30", blockedBy: [], parentTicket: null,
     }));
@@ -366,7 +366,7 @@ describe("COMPLETE: issue-aware routing", () => {
     const stage = new CompleteStage();
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001", title: "Test ticket" }],
+      completedTickets: [{ id: "TEST-T-001", title: "Test ticket" }],
       config: { maxTicketsPerSession: 0, compactThreshold: "high", reviewBackends: [] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -379,14 +379,14 @@ describe("COMPLETE: issue-aware routing", () => {
   // ISS-084: Low-severity open issues now keep the session alive
   it("routes to PICK_TICKET when only low-severity issues remain", async () => {
     // Mark the only ticket as complete
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Test ticket", type: "task", status: "complete",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Test ticket", type: "task", status: "complete",
       phase: "p1", order: 10, description: "", createdDate: "2026-03-30",
       completedDate: "2026-03-30", blockedBy: [], parentTicket: null,
     }));
     // Resolve high-severity issue, keep only low open
-    writeFileSync(join(testRoot, ".story", "issues", "ISS-001.json"), JSON.stringify({
-      id: "ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
+    writeFileSync(join(testRoot, ".story", "issues", "TEST-ISS-001.json"), JSON.stringify({
+      id: "TEST-ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
       components: [], impact: "Fixed", resolution: "Done", resolvedDate: "2026-03-30",
       discoveredDate: "2026-03-30", relatedTickets: [], location: [],
     }));
@@ -395,7 +395,7 @@ describe("COMPLETE: issue-aware routing", () => {
     const stage = new CompleteStage();
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001", title: "Test ticket" }],
+      completedTickets: [{ id: "TEST-T-001", title: "Test ticket" }],
       config: { maxTicketsPerSession: 0, compactThreshold: "high", reviewBackends: [] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -408,19 +408,19 @@ describe("COMPLETE: issue-aware routing", () => {
 
   it("routes to HANDOVER when all issues are resolved", async () => {
     // Mark the only ticket as complete
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Test ticket", type: "task", status: "complete",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Test ticket", type: "task", status: "complete",
       phase: "p1", order: 10, description: "", createdDate: "2026-03-30",
       completedDate: "2026-03-30", blockedBy: [], parentTicket: null,
     }));
     // Resolve ALL issues
-    writeFileSync(join(testRoot, ".story", "issues", "ISS-001.json"), JSON.stringify({
-      id: "ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
+    writeFileSync(join(testRoot, ".story", "issues", "TEST-ISS-001.json"), JSON.stringify({
+      id: "TEST-ISS-001", title: "Critical bug", status: "resolved", severity: "critical",
       components: [], impact: "Fixed", resolution: "Done", resolvedDate: "2026-03-30",
       discoveredDate: "2026-03-30", relatedTickets: [], location: [],
     }));
-    writeFileSync(join(testRoot, ".story", "issues", "ISS-002.json"), JSON.stringify({
-      id: "ISS-002", title: "Low priority styling", status: "resolved", severity: "low",
+    writeFileSync(join(testRoot, ".story", "issues", "TEST-ISS-002.json"), JSON.stringify({
+      id: "TEST-ISS-002", title: "Low priority styling", status: "resolved", severity: "low",
       components: [], impact: "Fixed", resolution: "Done", resolvedDate: "2026-03-30",
       discoveredDate: "2026-03-30", relatedTickets: [], location: [],
     }));
@@ -429,7 +429,7 @@ describe("COMPLETE: issue-aware routing", () => {
     const stage = new CompleteStage();
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001", title: "Test ticket" }],
+      completedTickets: [{ id: "TEST-T-001", title: "Test ticket" }],
       config: { maxTicketsPerSession: 0, compactThreshold: "high", reviewBackends: [] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -444,11 +444,11 @@ describe("COMPLETE: issue-aware routing", () => {
 // ISS-084: Issues route through COMPLETE (session limits apply)
 // ---------------------------------------------------------------------------
 
-describe("ISS-084: issue-fix routes through COMPLETE", () => {
+describe("TEST-ISS-084: issue-fix routes through COMPLETE", () => {
   it("issue-only session hits maxTicketsPerSession cap", async () => {
     // All tickets done, ISS-002 still open
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Test ticket", type: "task", status: "complete",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Test ticket", type: "task", status: "complete",
       phase: "p1", order: 10, description: "", createdDate: "2026-03-30",
       completedDate: "2026-03-30", blockedBy: [], parentTicket: null,
     }));
@@ -459,7 +459,7 @@ describe("ISS-084: issue-fix routes through COMPLETE", () => {
     const state = makeState({
       state: "COMPLETE",
       completedTickets: [],
-      resolvedIssues: ["ISS-003", "ISS-004", "ISS-005"],
+      resolvedIssues: ["TEST-ISS-003", "TEST-ISS-004", "TEST-ISS-005"],
       config: { maxTicketsPerSession: 3, compactThreshold: "high", reviewBackends: [] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -471,8 +471,8 @@ describe("ISS-084: issue-fix routes through COMPLETE", () => {
   });
 
   it("mixed ticket+issue session counts both toward cap", async () => {
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Test ticket", type: "task", status: "complete",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Test ticket", type: "task", status: "complete",
       phase: "p1", order: 10, description: "", createdDate: "2026-03-30",
       completedDate: "2026-03-30", blockedBy: [], parentTicket: null,
     }));
@@ -482,8 +482,8 @@ describe("ISS-084: issue-fix routes through COMPLETE", () => {
     // 2 tickets + 3 issues = 5 totalWorkDone, cap is 5
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001", title: "Test" }, { id: "T-002", title: "Test2" }],
-      resolvedIssues: ["ISS-003", "ISS-004", "ISS-005"],
+      completedTickets: [{ id: "TEST-T-001", title: "Test" }, { id: "TEST-T-002", title: "Test2" }],
+      resolvedIssues: ["TEST-ISS-003", "TEST-ISS-004", "TEST-ISS-005"],
       config: { maxTicketsPerSession: 5, compactThreshold: "high", reviewBackends: [] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());

@@ -23,7 +23,7 @@ import { telemetryDirPath } from "../../src/autonomous/liveness.js";
 
 function makeArtifact(overrides?: Partial<ReviewVerdictArtifact>): ReviewVerdictArtifact {
   return {
-    target: "T-072",
+    target: "TEST-T-072",
     stage: "plan",
     round: 1,
     reviewer: "codex",
@@ -66,7 +66,7 @@ function makeSessionState(overrides: Partial<FullSessionState> = {}): FullSessio
     config: { maxTicketsPerSession: 5, compactThreshold: "high", reviewBackends: ["agent"], handoverInterval: 3 },
     filedDeferrals: [], pendingDeferrals: [], deferralsUnfiled: false,
     resolvedIssues: [], currentIssue: null, targetWork: [],
-    ticket: { id: "T-072", title: "Variable speed ramp", claimed: true },
+    ticket: { id: "TEST-T-072", title: "Variable speed ramp", claimed: true },
     ...overrides,
   } as FullSessionState;
 }
@@ -113,7 +113,7 @@ describe("review verdict artifact recovery (Bug 1)", () => {
 
     const recovered = readReviewVerdict(sessionDir, result2.contentHash);
     expect(recovered).not.toBeNull();
-    expect(recovered!.target).toBe("T-072");
+    expect(recovered!.target).toBe("TEST-T-072");
     expect(recovered!.summary).toBe("All findings addressed.");
   });
 
@@ -232,7 +232,7 @@ describe("skip_ticket mechanism (Bug 3)", () => {
     const state = makeSessionState({
       state: "CODE_REVIEW",
       ticket: undefined,
-      currentIssue: { id: "ISS-050", title: "Some issue", severity: "high" },
+      currentIssue: { id: "TEST-ISS-050", title: "Some issue", severity: "high" },
     } as any);
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new CodeReviewStage();
@@ -244,7 +244,7 @@ describe("skip_ticket mechanism (Bug 3)", () => {
 
     expect(result).toHaveProperty("action", "goto");
     expect(result).toHaveProperty("target", "HANDOVER");
-    expect((result as any).result.instruction).toContain("ISS-050");
+    expect((result as any).result.instruction).toContain("TEST-ISS-050");
     expect(ctx.state.currentIssue).toBeNull();
   });
 });

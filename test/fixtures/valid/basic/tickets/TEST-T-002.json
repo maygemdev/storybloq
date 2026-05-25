@@ -1,5 +1,5 @@
 {
-  "id": "T-002",
+  "id": "TEST-T-002",
   "title": "Implement CLI scaffold",
   "description": "Create the basic CLI entry point with yargs.",
   "type": "feature",
@@ -8,5 +8,5 @@
   "order": 20,
   "createdDate": "2026-01-03",
   "completedDate": null,
-  "blockedBy": ["T-001"]
+  "blockedBy": ["TEST-T-001"]
 }

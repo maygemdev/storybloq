@@ -8,8 +8,8 @@ import type { LoadWarning } from "../../src/core/errors.js";
 describe("validateProject", () => {
   it("returns valid for clean project", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
-      issues: [makeIssue({ id: "ISS-001", relatedTickets: ["T-001"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", relatedTickets: ["TEST-T-001"] })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = validateProject(state);
@@ -19,7 +19,7 @@ describe("validateProject", () => {
 
   it("reports invalid phase ref", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "nonexistent" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "nonexistent" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = validateProject(state);
@@ -29,7 +29,7 @@ describe("validateProject", () => {
 
   it("null phase is valid", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: null })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: null })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     expect(validateProject(state).valid).toBe(true);
@@ -37,7 +37,7 @@ describe("validateProject", () => {
 
   it("reports invalid blockedBy ref", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-999"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-999"] })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = validateProject(state);
@@ -46,7 +46,7 @@ describe("validateProject", () => {
 
   it("reports invalid parentTicket ref", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", parentTicket: "T-999" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", parentTicket: "TEST-T-999" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     expect(validateProject(state).findings.some((f) => f.code === "invalid_parent_ref")).toBe(true);
@@ -54,8 +54,8 @@ describe("validateProject", () => {
 
   it("reports invalid relatedTickets ref on issue", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
-      issues: [makeIssue({ id: "ISS-001", relatedTickets: ["T-999"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", relatedTickets: ["TEST-T-999"] })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     expect(validateProject(state).findings.some((f) => f.code === "invalid_related_ticket_ref")).toBe(true);
@@ -64,8 +64,8 @@ describe("validateProject", () => {
   it("reports duplicate ticket IDs", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }),
-        makeTicket({ id: "T-001", phase: "p1", title: "Duplicate" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", title: "Duplicate" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -74,7 +74,7 @@ describe("validateProject", () => {
 
   it("reports duplicate issue IDs", () => {
     const state = makeState({
-      issues: [makeIssue({ id: "ISS-001" }), makeIssue({ id: "ISS-001" })],
+      issues: [makeIssue({ id: "TEST-ISS-001" }), makeIssue({ id: "TEST-ISS-001" })],
     });
     expect(validateProject(state).findings.some((f) => f.code === "duplicate_issue_id")).toBe(true);
   });
@@ -172,7 +172,7 @@ describe("validateProject", () => {
 
   it("reports self-referencing blockedBy", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-001"] })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-001"] })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     expect(validateProject(state).findings.some((f) => f.code === "self_ref_blocked_by")).toBe(true);
@@ -180,7 +180,7 @@ describe("validateProject", () => {
 
   it("reports self-referencing parentTicket", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", parentTicket: "T-001" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", parentTicket: "TEST-T-001" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     expect(validateProject(state).findings.some((f) => f.code === "self_ref_parent")).toBe(true);
@@ -189,8 +189,8 @@ describe("validateProject", () => {
   it("reports parentTicket cycle", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", parentTicket: "T-002" }),
-        makeTicket({ id: "T-002", phase: "p1", parentTicket: "T-001" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", parentTicket: "TEST-T-002" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", parentTicket: "TEST-T-001" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -200,8 +200,8 @@ describe("validateProject", () => {
   it("reports blockedBy cycle as error", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-002"] }),
-        makeTicket({ id: "T-002", phase: "p1", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-002"] }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -215,9 +215,9 @@ describe("validateProject", () => {
   it("reports blockedBy referencing umbrella", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }),
-        makeTicket({ id: "T-002", phase: "p1", parentTicket: "T-001" }),
-        makeTicket({ id: "T-003", phase: "p1", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -226,7 +226,7 @@ describe("validateProject", () => {
 
   it("warns on orphan open issue", () => {
     const state = makeState({
-      issues: [makeIssue({ id: "ISS-001", status: "open", relatedTickets: [] })],
+      issues: [makeIssue({ id: "TEST-ISS-001", status: "open", relatedTickets: [] })],
     });
     const result = validateProject(state);
     const finding = result.findings.find((f) => f.code === "orphan_issue");
@@ -236,7 +236,7 @@ describe("validateProject", () => {
 
   it("does not warn on resolved orphan issue", () => {
     const state = makeState({
-      issues: [makeIssue({ id: "ISS-001", status: "resolved", relatedTickets: [] })],
+      issues: [makeIssue({ id: "TEST-ISS-001", status: "resolved", relatedTickets: [] })],
     });
     expect(validateProject(state).findings.some((f) => f.code === "orphan_issue")).toBe(false);
   });
@@ -244,7 +244,7 @@ describe("validateProject", () => {
   it("reports multiple errors correctly", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "bad", blockedBy: ["T-999"] }),
+        makeTicket({ id: "TEST-T-001", phase: "bad", blockedBy: ["TEST-T-999"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -256,8 +256,8 @@ describe("validateProject", () => {
   it("reports duplicate leaf order as info", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10 }),
-        makeTicket({ id: "T-002", phase: "p1", order: 10 }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10 }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 10 }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -312,16 +312,16 @@ describe("crossNodeBlockedBy validation (T-337)", () => {
   }
 
   it("passes validation for valid cross-node refs", () => {
-    const ticket = makeTicket({ id: "T-001", phase: "p1" });
-    (ticket as Record<string, unknown>).crossNodeBlockedBy = ["engine:T-061"];
+    const ticket = makeTicket({ id: "TEST-T-001", phase: "p1" });
+    (ticket as Record<string, unknown>).crossNodeBlockedBy = ["engine:TEST-T-061"];
     const state = makeOrchestratorState([ticket]);
     const result = validateProject(state);
     expect(result.findings.filter((f) => f.code.includes("cross_node"))).toHaveLength(0);
   });
 
   it("flags ref to non-existent node", () => {
-    const ticket = makeTicket({ id: "T-001", phase: "p1" });
-    (ticket as Record<string, unknown>).crossNodeBlockedBy = ["nonexistent:T-001"];
+    const ticket = makeTicket({ id: "TEST-T-001", phase: "p1" });
+    (ticket as Record<string, unknown>).crossNodeBlockedBy = ["nonexistent:TEST-T-001"];
     const state = makeOrchestratorState([ticket]);
     const result = validateProject(state);
     expect(result.findings.some((f) => f.code === "unknown_cross_node_ref")).toBe(true);
@@ -329,7 +329,7 @@ describe("crossNodeBlockedBy validation (T-337)", () => {
 
   it("does not check cross-node refs on non-orchestrator projects", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = validateProject(state);

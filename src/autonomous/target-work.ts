@@ -69,7 +69,7 @@ export function buildTargetedCandidatesText(
   for (let i = 0; i < remaining.length; i++) {
     const id = remaining[i]!;
 
-    if (id.startsWith("ISS-")) {
+    if (id.includes("-ISS-")) {
       const issue = projectState.issues.find(iss => iss.id === id);
       if (!issue) {
         lines.push(`${i + 1}. **${id}** -- not found`);

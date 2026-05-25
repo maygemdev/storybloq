@@ -51,7 +51,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
       compactThreshold: "high",
       reviewBackends: ["codex", "agent"],
     },
-    ticket: { id: "T-001", title: "Test ticket", claimed: true },
+    ticket: { id: "TEST-T-001", title: "Test ticket", claimed: true },
     testBaseline: { exitCode: 0, passCount: 10, failCount: 0, summary: "10 passed" },
     filedDeferrals: [],
     pendingDeferrals: [],

@@ -121,13 +121,13 @@ describe("handleSessionReport", () => {
     const dir = makeSessionDir(testRoot);
     writeState(dir, {
       completedTickets: [
-        { id: "T-001", title: "First ticket", risk: "low", realizedRisk: "medium", commitHash: "aaa111" },
-        { id: "T-002", title: "Second ticket", risk: "medium", commitHash: "bbb222" },
+        { id: "TEST-T-001", title: "First ticket", risk: "low", realizedRisk: "medium", commitHash: "aaa111" },
+        { id: "TEST-T-002", title: "Second ticket", risk: "medium", commitHash: "bbb222" },
       ],
     });
     const result = await handleSessionReport(SESSION_ID, testRoot);
-    expect(result.output).toContain("T-001");
-    expect(result.output).toContain("T-002");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).toContain("TEST-T-002");
     expect(result.output).toContain("aaa111");
     expect(result.output).toContain("low → medium"); // realizedRisk escalation
   });
@@ -137,10 +137,10 @@ describe("handleSessionReport", () => {
     writeState(dir, {
       status: "active",
       state: "IMPLEMENT",
-      ticket: { id: "T-005", title: "Current work", risk: "high", claimed: true },
+      ticket: { id: "TEST-T-005", title: "Current work", risk: "high", claimed: true },
     });
     const result = await handleSessionReport(SESSION_ID, testRoot);
-    expect(result.output).toContain("T-005");
+    expect(result.output).toContain("TEST-T-005");
     expect(result.output).toContain("In progress");
   });
 

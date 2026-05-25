@@ -74,13 +74,13 @@ describe("scanNodeSummary", () => {
     const dir = await createNodeProject({
       name: "engine",
       tickets: [
-        { id: "T-001", status: "complete" },
-        { id: "T-002", status: "open" },
-        { id: "T-003", status: "inprogress" },
+        { id: "TEST-T-001", status: "complete" },
+        { id: "TEST-T-002", status: "open" },
+        { id: "TEST-T-003", status: "inprogress" },
       ],
       issues: [
-        { id: "ISS-001", status: "open", severity: "high" },
-        { id: "ISS-002", status: "resolved", severity: "low" },
+        { id: "TEST-ISS-001", status: "open", severity: "high" },
+        { id: "TEST-ISS-002", status: "resolved", severity: "low" },
       ],
     });
     const result = await scanNodeSummary(join(dir, ".story"));
@@ -104,9 +104,9 @@ describe("scanNodeSummary", () => {
     const dir = await createNodeProject({ name: "corrupt" });
     await writeFile(join(dir, ".story", "tickets", "T-BAD.json"), "{ invalid }");
     await writeFile(
-      join(dir, ".story", "tickets", "T-001.json"),
+      join(dir, ".story", "tickets", "TEST-T-001.json"),
       JSON.stringify({
-        id: "T-001", title: "Good", type: "task", status: "open",
+        id: "TEST-T-001", title: "Good", type: "task", status: "open",
         phase: null, order: 10, blockedBy: [], description: "",
         parentTicket: null, created: "2026-01-01",
       }),
@@ -119,8 +119,8 @@ describe("scanNodeSummary", () => {
     const dir = await createNodeProject({
       name: "mixed",
       tickets: [
-        { id: "T-001", status: "inprogress" },
-        { id: "T-002", status: "inprogress" },
+        { id: "TEST-T-001", status: "inprogress" },
+        { id: "TEST-T-002", status: "inprogress" },
       ],
     });
     const result = await scanNodeSummary(join(dir, ".story"));
@@ -133,9 +133,9 @@ describe("scanNodeSummary", () => {
     const dir = await createNodeProject({ name: "corrupt-issue" });
     await writeFile(join(dir, ".story", "issues", "ISS-BAD.json"), "not json");
     await writeFile(
-      join(dir, ".story", "issues", "ISS-001.json"),
+      join(dir, ".story", "issues", "TEST-ISS-001.json"),
       JSON.stringify({
-        id: "ISS-001", title: "Good issue", status: "open",
+        id: "TEST-ISS-001", title: "Good issue", status: "open",
         severity: "high", impact: "test", relatedTickets: [],
         created: "2026-01-01",
       }),
@@ -160,11 +160,11 @@ describe("scanAllSummaries", () => {
   it("scans multiple nodes concurrently", async () => {
     const dir1 = await createNodeProject({
       name: "engine",
-      tickets: [{ id: "T-001", status: "complete" }],
+      tickets: [{ id: "TEST-T-001", status: "complete" }],
     });
     const dir2 = await createNodeProject({
       name: "cloud",
-      tickets: [{ id: "T-001", status: "open" }, { id: "T-002", status: "open" }],
+      tickets: [{ id: "TEST-T-001", status: "open" }, { id: "TEST-T-002", status: "open" }],
     });
 
     const nodes = new Map<string, ResolvedNode>([
@@ -253,8 +253,8 @@ describe("loadNodeFullState", () => {
       features: { tickets: true, issues: true, handovers: true, roadmap: true, reviews: true },
     }));
     await writeFile(join(storyDir, "roadmap.json"), JSON.stringify({ title: "Roadmap", date: "2026-01-01", phases: [], blockers: [] }));
-    await writeFile(join(storyDir, "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Test ticket", description: "", type: "task",
+    await writeFile(join(storyDir, "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Test ticket", description: "", type: "task",
       status: "open", phase: null, order: 10, blockedBy: [],
       createdDate: "2026-01-01", completedDate: null,
     }));

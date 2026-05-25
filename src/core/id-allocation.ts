@@ -5,19 +5,21 @@ import type { Lesson } from "../models/lesson.js";
 import type { ProjectState } from "./project-state.js";
 import { TICKET_ID_REGEX, ISSUE_ID_REGEX, NOTE_ID_REGEX, LESSON_ID_REGEX } from "../models/types.js";
 
-const TICKET_NUMERIC_REGEX = /^T-(\d+)[a-z]?$/;
-const ISSUE_NUMERIC_REGEX = /^ISS-(\d+)$/;
+const TICKET_NUMERIC_REGEX = /^[A-Z0-9]{3,12}-T-(\d+)[a-z]?$/;
+const ISSUE_NUMERIC_REGEX = /^[A-Z0-9]{3,12}-ISS-(\d+)$/;
 const NOTE_NUMERIC_REGEX = /^N-(\d+)$/;
 const LESSON_NUMERIC_REGEX = /^L-(\d+)$/;
 
 /**
- * Next ticket ID: scan existing IDs, find max numeric part, return T-(max+1).
- * Zero-padded to 3 digits minimum. Handles suffixed IDs (T-077a → numeric 77).
- * Malformed IDs (not matching TICKET_ID_REGEX) are silently skipped.
+ * Next ticket ID: scan existing IDs within the given namespace, find max numeric
+ * part, return {namespace}-T-(max+1). Zero-padded to 3 digits minimum.
+ * Handles suffixed IDs (NS-T-077a → numeric 77).
  */
-export function nextTicketID(tickets: readonly Ticket[]): string {
+export function nextTicketID(tickets: readonly Ticket[], namespace: string): string {
   let max = 0;
+  const prefix = `${namespace}-T-`;
   for (const t of tickets) {
+    if (!t.id.startsWith(prefix)) continue;
     if (!TICKET_ID_REGEX.test(t.id)) continue;
     const match = t.id.match(TICKET_NUMERIC_REGEX);
     if (match?.[1]) {
@@ -25,16 +27,18 @@ export function nextTicketID(tickets: readonly Ticket[]): string {
       if (num > max) max = num;
     }
   }
-  return `T-${String(max + 1).padStart(3, "0")}`;
+  return `${namespace}-T-${String(max + 1).padStart(3, "0")}`;
 }
 
 /**
- * Next issue ID: scan existing IDs, find max numeric part, return ISS-(max+1).
- * Zero-padded to 3 digits minimum.
+ * Next issue ID: scan existing IDs within the given namespace, find max numeric
+ * part, return {namespace}-ISS-(max+1). Zero-padded to 3 digits minimum.
  */
-export function nextIssueID(issues: readonly Issue[]): string {
+export function nextIssueID(issues: readonly Issue[], namespace: string): string {
   let max = 0;
+  const prefix = `${namespace}-ISS-`;
   for (const i of issues) {
+    if (!i.id.startsWith(prefix)) continue;
     if (!ISSUE_ID_REGEX.test(i.id)) continue;
     const match = i.id.match(ISSUE_NUMERIC_REGEX);
     if (match?.[1]) {
@@ -42,7 +46,7 @@ export function nextIssueID(issues: readonly Issue[]): string {
       if (num > max) max = num;
     }
   }
-  return `ISS-${String(max + 1).padStart(3, "0")}`;
+  return `${namespace}-ISS-${String(max + 1).padStart(3, "0")}`;
 }
 
 /**

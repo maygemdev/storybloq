@@ -23,7 +23,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
     compactPending: false, compactPreparedAt: null, resumeBlocked: false,
     terminationReason: null, waitingForRetry: false, lastGuideCall: now, startedAt: now, guideCallCount: 5,
     config: { maxTicketsPerSession: 5, compactThreshold: "high", reviewBackends: ["agent"] },
-    ticket: { id: "T-001", title: "Test ticket", claimed: true, risk: "low" },
+    ticket: { id: "TEST-T-001", title: "Test ticket", claimed: true, risk: "low" },
     filedDeferrals: [], pendingDeferrals: [], deferralsUnfiled: false,
     resolvedIssues: [], currentIssue: null,
     ...overrides,
@@ -75,7 +75,7 @@ afterEach(() => { rmSync(testRoot, { recursive: true, force: true }); });
 // ISS-073: Plan review -- disposition-aware contradiction guard
 // ---------------------------------------------------------------------------
 
-describe("ISS-073: plan-review contradiction guard respects disposition", () => {
+describe("TEST-ISS-073: plan-review contradiction guard respects disposition", () => {
   it("approve + critical addressed -> advances (not blocked)", async () => {
     const { PlanReviewStage } = await import("../../../src/autonomous/stages/plan-review.js");
     const stage = new PlanReviewStage();
@@ -138,7 +138,7 @@ describe("ISS-073: plan-review contradiction guard respects disposition", () => 
 // ISS-073: Code review -- same disposition-aware guard
 // ---------------------------------------------------------------------------
 
-describe("ISS-073: code-review contradiction guard respects disposition", () => {
+describe("TEST-ISS-073: code-review contradiction guard respects disposition", () => {
   it("approve + critical addressed -> advances (not blocked)", async () => {
     const { CodeReviewStage } = await import("../../../src/autonomous/stages/code-review.js");
     const stage = new CodeReviewStage();
@@ -173,11 +173,11 @@ describe("ISS-073: code-review contradiction guard respects disposition", () => 
 // ISS-075: PICK_TICKET exits when all work is done
 // ---------------------------------------------------------------------------
 
-describe("ISS-075: PICK_TICKET exit when no work", () => {
+describe("TEST-ISS-075: PICK_TICKET exit when no work", () => {
   it("enter with no tickets and no high issues -> goto COMPLETE", async () => {
     // All tickets complete, no high issues
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Done", type: "task", status: "complete",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Done", type: "task", status: "complete",
       phase: "p1", order: 10, description: "", createdDate: "2026-03-31",
       completedDate: "2026-03-31", blockedBy: [], parentTicket: null,
     }));
@@ -194,13 +194,13 @@ describe("ISS-075: PICK_TICKET exit when no work", () => {
   });
 
   it("enter with no tickets but high issues -> returns instruction", async () => {
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Done", type: "task", status: "complete",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Done", type: "task", status: "complete",
       phase: "p1", order: 10, description: "", createdDate: "2026-03-31",
       completedDate: "2026-03-31", blockedBy: [], parentTicket: null,
     }));
-    writeFileSync(join(testRoot, ".story", "issues", "ISS-001.json"), JSON.stringify({
-      id: "ISS-001", title: "Critical bug", status: "open", severity: "critical",
+    writeFileSync(join(testRoot, ".story", "issues", "TEST-ISS-001.json"), JSON.stringify({
+      id: "TEST-ISS-001", title: "Critical bug", status: "open", severity: "critical",
       components: [], impact: "Bad", resolution: null, resolvedDate: null,
       discoveredDate: "2026-03-31", relatedTickets: [], location: [],
     }));
@@ -213,7 +213,7 @@ describe("ISS-075: PICK_TICKET exit when no work", () => {
     const result = await stage.enter(ctx);
     // Should return instruction (not StageAdvance) because there are issues to work on
     expect("instruction" in result).toBe(true);
-    expect((result as { instruction: string }).instruction).toContain("ISS-001");
+    expect((result as { instruction: string }).instruction).toContain("TEST-ISS-001");
   });
 
   it("PICK_TICKET can transition to COMPLETE", async () => {

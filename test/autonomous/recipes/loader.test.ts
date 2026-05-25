@@ -4,7 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { resolveRecipe } from "../../../src/autonomous/recipes/loader.js";
 
-describe("ISS-067: resolveRecipe stage overrides", () => {
+describe("TEST-ISS-067: resolveRecipe stage overrides", () => {
   it("BUILD disabled in recipe defaults, enabled via override -> in pipeline", () => {
     const recipe = resolveRecipe("coding", {
       stages: { BUILD: { enabled: true, command: "npm run build" } },

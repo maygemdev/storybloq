@@ -32,7 +32,7 @@ function makeSessionState(overrides: Record<string, unknown> = {}): Record<strin
     sessionId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
     state: "IMPLEMENT",
     status: "active",
-    ticket: { id: "T-100", title: "Test ticket", risk: "low" },
+    ticket: { id: "TEST-T-100", title: "Test ticket", risk: "low" },
     git: { branch: "test-branch" },
     ...overrides,
   };

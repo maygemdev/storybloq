@@ -125,7 +125,7 @@ function plantSymlinkSession(root: string, opts: SymlinkActiveOpts = {}): {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("T-251 bulk discovery containment", () => {
+describe("TEST-T-251 bulk discovery containment", () => {
   // Test 23
   it("stopIgnoresSymlinkActiveSession: findActiveSessionFull drops symlink escape before handleSessionStop write", async () => {
     const root = setupRoot();

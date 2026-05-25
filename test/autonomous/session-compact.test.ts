@@ -428,11 +428,11 @@ describe("handleResume HEAD validation", () => {
   });
 
   it("Branch B: HEAD mismatch clears lastPlanHash", () => {
-    const ticket = { id: "T-001", title: "Test", claimed: true, lastPlanHash: "oldhash" };
+    const ticket = { id: "TEST-T-001", title: "Test", claimed: true, lastPlanHash: "oldhash" };
     const recoveryTicket = { ...ticket, realizedRisk: undefined, lastPlanHash: undefined };
 
     expect(recoveryTicket.lastPlanHash).toBeUndefined();
-    expect(recoveryTicket.id).toBe("T-001"); // ticket preserved
+    expect(recoveryTicket.id).toBe("TEST-T-001"); // ticket preserved
   });
 
   it("Branch C: cannot validate HEAD — keeps compactPending, sets resumeBlocked", () => {

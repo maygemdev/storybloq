@@ -8,6 +8,7 @@ import {
   deleteNote,
 } from "../../core/project-loader.js";
 import { nextTicketID, nextIssueID, nextNoteID } from "../../core/id-allocation.js";
+import { getNamespace } from "../../core/local-config-loader.js";
 import { formatSelftestResult } from "../../core/output-formatter.js";
 import type { OutputFormat } from "../../models/types.js";
 import type { Ticket } from "../../models/ticket.js";
@@ -52,12 +53,14 @@ export async function handleSelftest(
     }
   }
 
+  const namespace = await getNamespace(root);
+
   try {
     // --- Ticket cycle ---
     let ticketId: string | undefined;
     try {
       const { state } = await loadProject(root);
-      ticketId = nextTicketID(state.tickets);
+      ticketId = nextTicketID(state.tickets, namespace);
       const today = todayISO();
       const ticket: Ticket = {
         id: ticketId,
@@ -132,7 +135,7 @@ export async function handleSelftest(
     let issueId: string | undefined;
     try {
       const { state } = await loadProject(root);
-      issueId = nextIssueID(state.issues);
+      issueId = nextIssueID(state.issues, namespace);
       const today = todayISO();
       const issue: Issue = {
         id: issueId,

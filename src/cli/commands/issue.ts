@@ -6,6 +6,7 @@ import {
   deleteIssue,
 } from "../../core/project-loader.js";
 import { nextIssueID } from "../../core/id-allocation.js";
+import { getNamespace } from "../../core/local-config-loader.js";
 import {
   formatIssueList,
   formatIssue,
@@ -223,7 +224,8 @@ export async function handleIssueCreate(
       validateRelatedTickets(args.relatedTickets, state);
     }
 
-    const id = nextIssueID(state.issues);
+    const namespace = await getNamespace(root);
+    const id = nextIssueID(state.issues, namespace);
     const issue: Issue = {
       id,
       title: args.title,

@@ -173,7 +173,7 @@ describe("ticket-to-ticket state reset (ISS-029)", () => {
         ],
       },
       finalizeCheckpoint: "committed",
-      completedTickets: [{ id: "T-001", title: "First", commitHash: "aaa" }],
+      completedTickets: [{ id: "TEST-T-001", title: "First", commitHash: "aaa" }],
     });
 
     // The fix in handleReportPickTicket resets these fields:
@@ -181,7 +181,7 @@ describe("ticket-to-ticket state reset (ISS-029)", () => {
       ...afterFirstTicket,
       state: "PLAN",
       previousState: "PICK_TICKET",
-      ticket: { id: "T-002", title: "Second", claimed: true },
+      ticket: { id: "TEST-T-002", title: "Second", claimed: true },
       reviews: { plan: [], code: [] },
       finalizeCheckpoint: null,
     };
@@ -202,7 +202,7 @@ describe("merge-base advancement (ISS-033)", () => {
     const beforeCommit = makeState({
       state: "FINALIZE",
       git: { branch: "main", mergeBase: "initial-abc", expectedHead: "initial-abc" },
-      ticket: { id: "T-001", title: "Test", claimed: true },
+      ticket: { id: "TEST-T-001", title: "Test", claimed: true },
     });
 
     // Simulate what handleReportFinalize now does on commit_done:
@@ -212,7 +212,7 @@ describe("merge-base advancement (ISS-033)", () => {
       state: "COMPLETE",
       previousState: "FINALIZE",
       finalizeCheckpoint: "committed" as const,
-      completedTickets: [{ id: "T-001", title: "Test", commitHash, risk: "low" }],
+      completedTickets: [{ id: "TEST-T-001", title: "Test", commitHash, risk: "low" }],
       ticket: undefined,
       git: {
         ...beforeCommit.git,
@@ -350,7 +350,7 @@ describe("code review verdict routing (ISS-035)", () => {
         plan: [{ round: 1, reviewer: "codex", verdict: "approve", findingCount: 0, criticalCount: 0, majorCount: 0, suggestionCount: 0, timestamp: "" }],
         code: [{ round: 1, reviewer: "codex", verdict: "reject", findingCount: 3, criticalCount: 1, majorCount: 1, suggestionCount: 1, timestamp: "" }],
       },
-      ticket: { id: "T-001", title: "Test", claimed: true, risk: "medium", realizedRisk: "high" },
+      ticket: { id: "TEST-T-001", title: "Test", claimed: true, risk: "medium", realizedRisk: "high" },
     });
 
     // Simulate CODE_REVIEW → PLAN reset
@@ -396,7 +396,7 @@ describe("plan fingerprint (ISS-035)", () => {
     const hash = simpleHash(planContent);
 
     const state = makeState({
-      ticket: { id: "T-001", title: "Test", claimed: true, lastPlanHash: hash },
+      ticket: { id: "TEST-T-001", title: "Test", claimed: true, lastPlanHash: hash },
     });
 
     // Same plan resubmitted — fingerprint matches
@@ -408,7 +408,7 @@ describe("plan fingerprint (ISS-035)", () => {
   it("changed plan after revise passes fingerprint check", () => {
     const hash = simpleHash("# Original Plan\n\nDo thing A.");
     const state = makeState({
-      ticket: { id: "T-001", title: "Test", claimed: true, lastPlanHash: hash },
+      ticket: { id: "TEST-T-001", title: "Test", claimed: true, lastPlanHash: hash },
     });
 
     const newHash = simpleHash("# Revised Plan\n\nDo thing B instead.");
@@ -461,7 +461,7 @@ describe("pendingProjectMutation (ISS-024)", () => {
   it("mutation marker shape is correct", () => {
     const mutation = {
       type: "ticket_update",
-      target: "T-001",
+      target: "TEST-T-001",
       field: "status",
       value: "inprogress",
       expectedCurrent: "open",
@@ -474,7 +474,7 @@ describe("pendingProjectMutation (ISS-024)", () => {
       },
     };
     expect(mutation.type).toBe("ticket_update");
-    expect(mutation.target).toBe("T-001");
+    expect(mutation.target).toBe("TEST-T-001");
     expect(mutation.postMutation.clearTicket).toBe(false);
   });
 
@@ -583,11 +583,11 @@ describe("cancel ticket release (ISS-027)", () => {
   it("cancel event includes ticketId and release status", () => {
     const eventData = {
       previousState: "IMPLEMENT",
-      ticketId: "T-001",
+      ticketId: "TEST-T-001",
       ticketReleased: true,
       ticketConflict: false,
     };
-    expect(eventData.ticketId).toBe("T-001");
+    expect(eventData.ticketId).toBe("TEST-T-001");
     expect(eventData.ticketReleased).toBe(true);
   });
 });
@@ -637,7 +637,7 @@ describe("claimedBySession invariant (ISS-027)", () => {
   });
 
   it("legacy tickets without claimedBySession load without error", () => {
-    const legacyTicket = { id: "T-001", status: "open" };
+    const legacyTicket = { id: "TEST-T-001", status: "open" };
     const claim = (legacyTicket as Record<string, unknown>).claimedBySession;
     expect(claim).toBeUndefined();
     // Treated as unclaimed — no error
@@ -692,7 +692,7 @@ describe("cancel guard (ISS-036)", () => {
 
 describe("pressure hiding (ISS-036)", () => {
   it("markdown output shows tickets done, not pressure label", () => {
-    const completed = ["T-001", "T-002"];
+    const completed = ["TEST-T-001", "TEST-T-002"];
     const output = `**Tickets done:** ${completed.length}`;
     expect(output).toContain("Tickets done:** 2");
     expect(output).not.toContain("Pressure");
@@ -745,7 +745,7 @@ describe("deferred finding filing (ISS-037)", () => {
   });
 
   it("duplicate fingerprint skipped", () => {
-    const filedDeferrals = [{ fingerprint: "abc123", issueId: "ISS-100" }];
+    const filedDeferrals = [{ fingerprint: "abc123", issueId: "TEST-ISS-100" }];
     const newFingerprint = "abc123";
     const isDuplicate = filedDeferrals.some(d => d.fingerprint === newFingerprint);
     expect(isDuplicate).toBe(true);
@@ -762,7 +762,7 @@ describe("deferred finding filing (ISS-037)", () => {
     const pending = [{ fingerprint: "xyz", severity: "minor", category: "test", description: "desc", reviewKind: "code" as const }];
     const filed: { fingerprint: string; issueId: string }[] = [];
     // On success:
-    filed.push({ fingerprint: pending[0]!.fingerprint, issueId: "ISS-100" });
+    filed.push({ fingerprint: pending[0]!.fingerprint, issueId: "TEST-ISS-100" });
     const remaining = pending.filter(p => !filed.some(f => f.fingerprint === p.fingerprint));
     expect(filed).toHaveLength(1);
     expect(remaining).toHaveLength(0);

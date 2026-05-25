@@ -80,7 +80,7 @@ describe("snapshot", () => {
     it("includes warnings when present", async () => {
       const dir = await setupProject();
       // Write a corrupt ticket to trigger a warning
-      await writeFile(join(dir, ".story", "tickets", "T-099.json"), "{bad");
+      await writeFile(join(dir, ".story", "tickets", "TEST-T-099.json"), "{bad");
       const loadResult = await loadProject(dir);
       expect(loadResult.warnings.length).toBeGreaterThan(0);
 
@@ -181,53 +181,53 @@ describe("snapshot", () => {
   describe("diffStates", () => {
     it("detects added tickets", () => {
       const snap = makeState({
-        tickets: [makeTicket({ id: "T-001" })],
+        tickets: [makeTicket({ id: "TEST-T-001" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const cur = makeState({
         tickets: [
-          makeTicket({ id: "T-001" }),
-          makeTicket({ id: "T-002", title: "New one" }),
+          makeTicket({ id: "TEST-T-001" }),
+          makeTicket({ id: "TEST-T-002", title: "New one" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
 
       const diff = diffStates(snap, cur);
-      expect(diff.tickets.added).toEqual([{ id: "T-002", title: "New one" }]);
+      expect(diff.tickets.added).toEqual([{ id: "TEST-T-002", title: "New one" }]);
       expect(diff.tickets.removed).toEqual([]);
     });
 
     it("detects removed tickets", () => {
       const snap = makeState({
         tickets: [
-          makeTicket({ id: "T-001" }),
-          makeTicket({ id: "T-002", title: "Gone" }),
+          makeTicket({ id: "TEST-T-001" }),
+          makeTicket({ id: "TEST-T-002", title: "Gone" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const cur = makeState({
-        tickets: [makeTicket({ id: "T-001" })],
+        tickets: [makeTicket({ id: "TEST-T-001" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
 
       const diff = diffStates(snap, cur);
-      expect(diff.tickets.removed).toEqual([{ id: "T-002", title: "Gone" }]);
+      expect(diff.tickets.removed).toEqual([{ id: "TEST-T-002", title: "Gone" }]);
     });
 
     it("detects ticket status changes", () => {
       const snap = makeState({
-        tickets: [makeTicket({ id: "T-001", status: "open" })],
+        tickets: [makeTicket({ id: "TEST-T-001", status: "open" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const cur = makeState({
-        tickets: [makeTicket({ id: "T-001", status: "complete" })],
+        tickets: [makeTicket({ id: "TEST-T-001", status: "complete" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
 
       const diff = diffStates(snap, cur);
       expect(diff.tickets.statusChanged).toHaveLength(1);
       expect(diff.tickets.statusChanged[0]).toMatchObject({
-        id: "T-001",
+        id: "TEST-T-001",
         from: "open",
         to: "complete",
       });
@@ -236,32 +236,32 @@ describe("snapshot", () => {
     it("detects added issues", () => {
       const snap = makeState();
       const cur = makeState({
-        issues: [makeIssue({ id: "ISS-001", title: "Bug" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", title: "Bug" })],
       });
 
       const diff = diffStates(snap, cur);
-      expect(diff.issues.added).toEqual([{ id: "ISS-001", title: "Bug" }]);
+      expect(diff.issues.added).toEqual([{ id: "TEST-ISS-001", title: "Bug" }]);
     });
 
     it("detects resolved issues", () => {
       const snap = makeState({
-        issues: [makeIssue({ id: "ISS-001", status: "open" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", status: "open" })],
       });
       const cur = makeState({
-        issues: [makeIssue({ id: "ISS-001", status: "resolved" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", status: "resolved" })],
       });
 
       const diff = diffStates(snap, cur);
       expect(diff.issues.resolved).toHaveLength(1);
-      expect(diff.issues.resolved[0]!.id).toBe("ISS-001");
+      expect(diff.issues.resolved[0]!.id).toBe("TEST-ISS-001");
     });
 
     it("detects issue status changes (not resolved)", () => {
       const snap = makeState({
-        issues: [makeIssue({ id: "ISS-001", status: "open" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", status: "open" })],
       });
       const cur = makeState({
-        issues: [makeIssue({ id: "ISS-001", status: "inprogress" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", status: "inprogress" })],
       });
 
       const diff = diffStates(snap, cur);
@@ -274,11 +274,11 @@ describe("snapshot", () => {
 
     it("detects phase status transitions", () => {
       const snap = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const cur = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
 
@@ -352,41 +352,41 @@ describe("snapshot", () => {
 
     it("detects ticket description changes", () => {
       const snap = makeState({
-        tickets: [makeTicket({ id: "T-001", description: "Old desc" })],
+        tickets: [makeTicket({ id: "TEST-T-001", description: "Old desc" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const cur = makeState({
-        tickets: [makeTicket({ id: "T-001", description: "New desc" })],
+        tickets: [makeTicket({ id: "TEST-T-001", description: "New desc" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
 
       const diff = diffStates(snap, cur);
       expect(diff.tickets.descriptionChanged).toHaveLength(1);
-      expect(diff.tickets.descriptionChanged[0]).toMatchObject({ id: "T-001" });
+      expect(diff.tickets.descriptionChanged[0]).toMatchObject({ id: "TEST-T-001" });
     });
 
     it("detects issue impact changes", () => {
       const snap = makeState({
-        issues: [makeIssue({ id: "ISS-001", impact: "Old impact" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", impact: "Old impact" })],
       });
       const cur = makeState({
-        issues: [makeIssue({ id: "ISS-001", impact: "New impact" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", impact: "New impact" })],
       });
 
       const diff = diffStates(snap, cur);
       expect(diff.issues.impactChanged).toHaveLength(1);
-      expect(diff.issues.impactChanged[0]).toMatchObject({ id: "ISS-001" });
+      expect(diff.issues.impactChanged[0]).toMatchObject({ id: "TEST-ISS-001" });
     });
 
     it("does not report unchanged content", () => {
       const snap = makeState({
-        tickets: [makeTicket({ id: "T-001", description: "Same desc" })],
-        issues: [makeIssue({ id: "ISS-001", impact: "Same impact" })],
+        tickets: [makeTicket({ id: "TEST-T-001", description: "Same desc" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", impact: "Same impact" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const cur = makeState({
-        tickets: [makeTicket({ id: "T-001", description: "Same desc" })],
-        issues: [makeIssue({ id: "ISS-001", impact: "Same impact" })],
+        tickets: [makeTicket({ id: "TEST-T-001", description: "Same desc" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", impact: "Same impact" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
 
@@ -397,7 +397,7 @@ describe("snapshot", () => {
 
     it("returns empty diff when nothing changed", () => {
       const state = makeState({
-        tickets: [makeTicket({ id: "T-001" })],
+        tickets: [makeTicket({ id: "TEST-T-001" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
 
@@ -426,13 +426,13 @@ describe("snapshot", () => {
 
     it("includes suggested actions even without snapshot", async () => {
       const state = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
-        issues: [makeIssue({ id: "ISS-001", severity: "critical" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", severity: "critical" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const recap = await buildRecap(state, null, "/tmp");
       expect(recap.suggestedActions.nextTicket).not.toBeNull();
-      expect(recap.suggestedActions.nextTicket!.id).toBe("T-001");
+      expect(recap.suggestedActions.nextTicket!.id).toBe("TEST-T-001");
       expect(recap.suggestedActions.highSeverityIssues).toHaveLength(1);
     });
 
@@ -447,7 +447,7 @@ describe("snapshot", () => {
           roadmap: emptyRoadmap,
           tickets: [],
           issues: [],
-          warnings: [{ type: "parse_error", file: "T-099.json", message: "bad" }],
+          warnings: [{ type: "parse_error", file: "TEST-T-099.json", message: "bad" }],
         },
         filename: "2026-03-20T00-00-00-000.json",
       };
@@ -475,7 +475,7 @@ describe("snapshot", () => {
 
     it("populates changes when snapshot exists", async () => {
       const currentState = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const snapshotInfo = {
@@ -485,7 +485,7 @@ describe("snapshot", () => {
           project: "test",
           config: minimalConfig,
           roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-          tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
+          tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
           issues: [],
         },
         filename: "2026-03-20T00-00-00-000.json",
@@ -584,19 +584,19 @@ describe("snapshot", () => {
     it("filters high severity issues for suggested actions", async () => {
       const state = makeState({
         issues: [
-          makeIssue({ id: "ISS-001", severity: "critical" }),
-          makeIssue({ id: "ISS-002", severity: "low" }),
-          makeIssue({ id: "ISS-003", severity: "high" }),
-          makeIssue({ id: "ISS-004", severity: "medium" }),
-          makeIssue({ id: "ISS-005", severity: "high", status: "resolved" }),
+          makeIssue({ id: "TEST-ISS-001", severity: "critical" }),
+          makeIssue({ id: "TEST-ISS-002", severity: "low" }),
+          makeIssue({ id: "TEST-ISS-003", severity: "high" }),
+          makeIssue({ id: "TEST-ISS-004", severity: "medium" }),
+          makeIssue({ id: "TEST-ISS-005", severity: "high", status: "resolved" }),
         ],
       });
       const recap = await buildRecap(state, null, "/tmp");
       // Only critical + high, excluding resolved
       expect(recap.suggestedActions.highSeverityIssues).toHaveLength(2);
       const ids = recap.suggestedActions.highSeverityIssues.map((i) => i.id);
-      expect(ids).toContain("ISS-001");
-      expect(ids).toContain("ISS-003");
+      expect(ids).toContain("TEST-ISS-001");
+      expect(ids).toContain("TEST-ISS-003");
     });
 
     it("omits staleness when snapshot lacks gitHead", async () => {

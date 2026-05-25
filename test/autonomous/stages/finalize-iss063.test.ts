@@ -42,7 +42,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
     compactPending: false, compactPreparedAt: null, resumeBlocked: false,
     terminationReason: null, waitingForRetry: false, lastGuideCall: now, startedAt: now, guideCallCount: 5,
     config: { maxTicketsPerSession: 5, compactThreshold: "high", reviewBackends: ["codex", "agent"] },
-    ticket: { id: "T-001", title: "Test ticket", claimed: true },
+    ticket: { id: "TEST-T-001", title: "Test ticket", claimed: true },
     filedDeferrals: [], pendingDeferrals: [], deferralsUnfiled: false,
     ...overrides,
   } as FullSessionState;
@@ -57,7 +57,7 @@ function makeRecipe(): ResolvedRecipe {
   };
 }
 
-describe("ISS-063: FINALIZE idempotent checkpoint", () => {
+describe("TEST-ISS-063: FINALIZE idempotent checkpoint", () => {
   let testRoot: string;
   let sessionDir: string;
   const stage = new FinalizeStage();
@@ -87,7 +87,7 @@ describe("ISS-063: FINALIZE idempotent checkpoint", () => {
   });
 });
 
-describe("T-187: per-ticket timing in completedTickets", () => {
+describe("TEST-T-187: per-ticket timing in completedTickets", () => {
   let testRoot: string;
   let sessionDir: string;
   const stage = new FinalizeStage();
@@ -161,7 +161,7 @@ describe("T-187: per-ticket timing in completedTickets", () => {
     const state = makeState({
       finalizeCheckpoint: "precommit_passed",
       ticketStartedAt: "2026-04-04T09:00:00.000Z",
-      currentIssue: { id: "ISS-001", title: "Test issue", severity: "high" },
+      currentIssue: { id: "TEST-ISS-001", title: "Test issue", severity: "high" },
       ticket: undefined,
     } as Partial<FullSessionState>);
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());

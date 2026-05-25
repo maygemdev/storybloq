@@ -5,7 +5,7 @@ const validLesson = {
   id: "L-001",
   title: "Multi-round reviews catch different bugs",
   content: "Always use mixed reviewers. Round 1 finds architecture issues.",
-  context: "T-035/T-036: 12 issues in round 1, 0 in round 2, consistent across batches.",
+  context: "TEST-T-035/T-036: 12 issues in round 1, 0 in round 2, consistent across batches.",
   source: "review",
   tags: ["review", "process"],
   reinforcements: 3,
@@ -93,7 +93,7 @@ describe("LessonSchema", () => {
     });
 
     it("rejects invalid supersedes format", () => {
-      expect(LessonSchema.safeParse({ ...validLesson, supersedes: "T-001" }).success).toBe(false);
+      expect(LessonSchema.safeParse({ ...validLesson, supersedes: "TEST-T-001" }).success).toBe(false);
     });
 
     it("supersedes uses LessonIdSchema — rejects same formats as id field", () => {

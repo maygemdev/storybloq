@@ -64,10 +64,10 @@ describe("init command logic", () => {
     tmpDirs.push(dir);
     await initProject(dir, { name: "first" });
     // Write a corrupt JSON file into tickets/
-    await writeFile(join(dir, ".story", "tickets", "T-099.json"), "{bad json");
+    await writeFile(join(dir, ".story", "tickets", "TEST-T-099.json"), "{bad json");
     const result = await initProject(dir, { name: "second", force: true });
     expect(result.warnings.length).toBe(1);
-    expect(result.warnings[0]).toContain("T-099.json");
+    expect(result.warnings[0]).toContain("TEST-T-099.json");
   });
 
   it("warns about schema-invalid files on --force", async () => {
@@ -75,10 +75,10 @@ describe("init command logic", () => {
     tmpDirs.push(dir);
     await initProject(dir, { name: "first" });
     // Write valid JSON but schema-invalid ticket (missing required fields)
-    await writeFile(join(dir, ".story", "tickets", "T-001.json"), '{"id":"T-001","title":"test"}');
+    await writeFile(join(dir, ".story", "tickets", "TEST-T-001.json"), '{"id":"TEST-T-001","title":"test"}');
     const result = await initProject(dir, { name: "second", force: true });
     expect(result.warnings.length).toBe(1);
-    expect(result.warnings[0]).toContain("T-001.json");
+    expect(result.warnings[0]).toContain("TEST-T-001.json");
   });
 
   it("returns empty warnings on --force with no corrupt files", async () => {

@@ -41,7 +41,7 @@ const [tDir, resultPath, mode, holdMs] = process.argv.slice(2);
   writeFileSync(targetPath, helper);
 }
 
-describePosix("T-283 liveness concurrency", () => {
+describePosix("TEST-T-283 liveness concurrency", () => {
   let tmpDir: string;
   let tDir: string;
   let helperPath: string;

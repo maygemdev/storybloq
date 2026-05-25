@@ -58,7 +58,7 @@ function formatPlanJson(plan: DispatchPlan): string {
 
 function titleLookup(ctx: CommandContext): (id: string) => string | undefined {
   return (id) => {
-    if (id.startsWith("ISS-")) return ctx.state.issueByID(id)?.title;
+    if (id.includes("-ISS-")) return ctx.state.issueByID(id)?.title;
     return ctx.state.ticketByID(id)?.title;
   };
 }

@@ -2,11 +2,11 @@ import { z } from "zod";
 
 // --- ID format regexes ---
 
-/** Matches T-001, T-077a, T-079b */
-export const TICKET_ID_REGEX = /^T-\d+[a-z]?$/;
+/** Matches namespaced ticket IDs: TMP7654-T-001, DEV01-T-077a */
+export const TICKET_ID_REGEX = /^[A-Z0-9]{3,12}-T-\d+[a-z]?$/;
 
-/** Matches ISS-001, ISS-009 */
-export const ISSUE_ID_REGEX = /^ISS-\d+$/;
+/** Matches namespaced issue IDs: TMP7654-ISS-001, DEV01-ISS-009 */
+export const ISSUE_ID_REGEX = /^[A-Z0-9]{3,12}-ISS-\d+$/;
 
 // --- Ticket enums ---
 
@@ -81,8 +81,13 @@ export const DateSchema = z
 
 export const TicketIdSchema = z
   .string()
-  .regex(TICKET_ID_REGEX, "Ticket ID must match T-NNN or T-NNNx");
+  .regex(TICKET_ID_REGEX, "Ticket ID must match {NS}-T-NNN or {NS}-T-NNNx");
 
 export const IssueIdSchema = z
   .string()
-  .regex(ISSUE_ID_REGEX, "Issue ID must match ISS-NNN");
+  .regex(ISSUE_ID_REGEX, "Issue ID must match {NS}-ISS-NNN");
+
+export function extractNamespace(id: string): string | null {
+  const match = id.match(/^([A-Z0-9]{3,12})-(?:T-\d+[a-z]?|ISS-\d+)$/);
+  return match ? match[1]! : null;
+}

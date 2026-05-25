@@ -73,7 +73,7 @@ describe("recommend", () => {
 
   it("all-complete project → empty recommendations", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 5);
@@ -83,30 +83,30 @@ describe("recommend", () => {
   it("critical issue ranks above in-progress ticket", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", status: "inprogress" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", status: "inprogress" }),
       ],
       issues: [
-        makeIssue({ id: "ISS-001", severity: "critical" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "critical" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 5);
     expect(result.recommendations.length).toBeGreaterThanOrEqual(2);
-    expect(result.recommendations[0]!.id).toBe("ISS-001");
+    expect(result.recommendations[0]!.id).toBe("TEST-ISS-001");
     expect(result.recommendations[0]!.category).toBe("critical_issue");
   });
 
   it("in-progress ticket ranks above quick win chore", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "inprogress" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "inprogress" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 5);
-    const inprog = result.recommendations.find((r) => r.id === "T-001");
-    const chore = result.recommendations.find((r) => r.id === "T-002");
+    const inprog = result.recommendations.find((r) => r.id === "TEST-T-001");
+    const chore = result.recommendations.find((r) => r.id === "TEST-T-002");
     expect(inprog).toBeDefined();
     expect(chore).toBeDefined();
     expect(inprog!.score).toBeGreaterThan(chore!.score);
@@ -116,8 +116,8 @@ describe("recommend", () => {
     // Craft a state with duplicate ticket IDs to trigger validation error
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }),
-        makeTicket({ id: "T-001", phase: "p1" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -134,12 +134,12 @@ describe("recommend", () => {
     // Single in-progress ticket is both inprogress_ticket (800) and phase_momentum (500)
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "inprogress" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "inprogress" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10);
-    const matches = result.recommendations.filter((r) => r.id === "T-001");
+    const matches = result.recommendations.filter((r) => r.id === "TEST-T-001");
     expect(matches).toHaveLength(1);
     expect(matches[0]!.category).toBe("inprogress_ticket");
     expect(matches[0]!.score).toBe(800);
@@ -148,12 +148,12 @@ describe("recommend", () => {
   it("dedup: unblocked chore in quick_win also in phase_momentum → keeps phase_momentum score", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open", type: "chore" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open", type: "chore" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10);
-    const matches = result.recommendations.filter((r) => r.id === "T-001");
+    const matches = result.recommendations.filter((r) => r.id === "TEST-T-001");
     expect(matches).toHaveLength(1);
     // phase_momentum (500) > quick_win (400)
     expect(matches[0]!.category).toBe("phase_momentum");
@@ -163,13 +163,13 @@ describe("recommend", () => {
   it("count limits output", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open" }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, status: "open" }),
       ],
       issues: [
-        makeIssue({ id: "ISS-001", severity: "medium" }),
-        makeIssue({ id: "ISS-002", severity: "low" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "medium" }),
+        makeIssue({ id: "TEST-ISS-002", severity: "low" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -180,7 +180,7 @@ describe("recommend", () => {
 
   it("count > candidates → returns all (no padding)", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10);
@@ -191,12 +191,12 @@ describe("recommend", () => {
   it("totalCandidates reflects pre-truncation count", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open" }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, status: "open" }),
       ],
       issues: [
-        makeIssue({ id: "ISS-001", severity: "medium" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "medium" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -209,9 +209,9 @@ describe("recommend", () => {
   it("high-impact unblock includes count in reason", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", blockedBy: ["T-001"] }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, status: "open", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", blockedBy: ["TEST-T-001"] }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, status: "open", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -227,12 +227,12 @@ describe("recommend", () => {
   it("near-complete umbrella at 80% included", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }), // umbrella
-        makeTicket({ id: "T-002", phase: "p1", order: 10, status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-003", phase: "p1", order: 20, status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-004", phase: "p1", order: 30, status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-005", phase: "p1", order: 40, status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-006", phase: "p1", order: 50, status: "open", parentTicket: "T-001" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }), // umbrella
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 10, status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 20, status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-004", phase: "p1", order: 30, status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-005", phase: "p1", order: 40, status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-006", phase: "p1", order: 50, status: "open", parentTicket: "TEST-T-001" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -241,24 +241,24 @@ describe("recommend", () => {
       (r) => r.category === "near_complete_umbrella",
     );
     expect(umbrella).toBeDefined();
-    expect(umbrella!.id).toBe("T-006"); // first incomplete leaf
+    expect(umbrella!.id).toBe("TEST-T-006"); // first incomplete leaf
     expect(umbrella!.reason).toContain("4/5");
-    expect(umbrella!.reason).toContain("T-001");
+    expect(umbrella!.reason).toContain("TEST-T-001");
   });
 
   it("near-complete umbrella at 70% excluded", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }), // umbrella
-        makeTicket({ id: "T-002", phase: "p1", order: 10, status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-003", phase: "p1", order: 20, status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-004", phase: "p1", order: 30, status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-005", phase: "p1", order: 40, status: "open", parentTicket: "T-001" }),
-        makeTicket({ id: "T-006", phase: "p1", order: 50, status: "open", parentTicket: "T-001" }),
-        makeTicket({ id: "T-007", phase: "p1", order: 60, status: "open", parentTicket: "T-001" }),
-        makeTicket({ id: "T-008", phase: "p1", order: 70, status: "open", parentTicket: "T-001" }),
-        makeTicket({ id: "T-009", phase: "p1", order: 80, status: "open", parentTicket: "T-001" }),
-        makeTicket({ id: "T-010", phase: "p1", order: 90, status: "open", parentTicket: "T-001" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }), // umbrella
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 10, status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 20, status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-004", phase: "p1", order: 30, status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-005", phase: "p1", order: 40, status: "open", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-006", phase: "p1", order: 50, status: "open", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-007", phase: "p1", order: 60, status: "open", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-008", phase: "p1", order: 70, status: "open", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-009", phase: "p1", order: 80, status: "open", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-010", phase: "p1", order: 90, status: "open", parentTicket: "TEST-T-001" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -272,13 +272,13 @@ describe("recommend", () => {
   it("near-complete umbrella emits first incomplete leaf (not umbrella)", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }), // top umbrella
-        makeTicket({ id: "T-002", phase: "p1", parentTicket: "T-001" }), // nested umbrella
-        makeTicket({ id: "T-003", phase: "p1", order: 10, status: "complete", parentTicket: "T-002" }),
-        makeTicket({ id: "T-004", phase: "p1", order: 20, status: "complete", parentTicket: "T-002" }),
-        makeTicket({ id: "T-005", phase: "p1", order: 30, status: "complete", parentTicket: "T-002" }),
-        makeTicket({ id: "T-006", phase: "p1", order: 40, status: "open", parentTicket: "T-002" }),
-        makeTicket({ id: "T-007", phase: "p1", order: 50, status: "complete", parentTicket: "T-001" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1" }), // top umbrella
+        makeTicket({ id: "TEST-T-002", phase: "p1", parentTicket: "TEST-T-001" }), // nested umbrella
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 10, status: "complete", parentTicket: "TEST-T-002" }),
+        makeTicket({ id: "TEST-T-004", phase: "p1", order: 20, status: "complete", parentTicket: "TEST-T-002" }),
+        makeTicket({ id: "TEST-T-005", phase: "p1", order: 30, status: "complete", parentTicket: "TEST-T-002" }),
+        makeTicket({ id: "TEST-T-006", phase: "p1", order: 40, status: "open", parentTicket: "TEST-T-002" }),
+        makeTicket({ id: "TEST-T-007", phase: "p1", order: 50, status: "complete", parentTicket: "TEST-T-001" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -288,14 +288,14 @@ describe("recommend", () => {
     );
     expect(umbrella).toBeDefined();
     // Should be T-006 (leaf), not T-002 (nested umbrella)
-    expect(umbrella!.id).toBe("T-006");
+    expect(umbrella!.id).toBe("TEST-T-006");
   });
 
   it("quick wins are chore-type only", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open", type: "task" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open", type: "task" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -304,13 +304,13 @@ describe("recommend", () => {
       (r) => r.category === "quick_win",
     );
     expect(quickWins).toHaveLength(1);
-    expect(quickWins[0]!.id).toBe("T-002");
+    expect(quickWins[0]!.id).toBe("TEST-T-002");
   });
 
   it("blocked tickets excluded from quick wins", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open", type: "chore", blockedBy: ["T-999"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open", type: "chore", blockedBy: ["TEST-T-999"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -324,8 +324,8 @@ describe("recommend", () => {
   it("medium/low issues appear in open_issue category", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", severity: "medium" }),
-        makeIssue({ id: "ISS-002", severity: "low" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "medium" }),
+        makeIssue({ id: "TEST-ISS-002", severity: "low" }),
       ],
     });
     const result = recommend(state, 10);
@@ -334,15 +334,15 @@ describe("recommend", () => {
     );
     expect(openIssues).toHaveLength(2);
     // medium ranks above low
-    expect(openIssues[0]!.id).toBe("ISS-001");
+    expect(openIssues[0]!.id).toBe("TEST-ISS-001");
   });
 
   it("resolved issues excluded, inprogress included", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", severity: "critical", status: "resolved" }),
-        makeIssue({ id: "ISS-002", severity: "high", status: "inprogress" }),
-        makeIssue({ id: "ISS-003", severity: "medium", status: "resolved" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "critical", status: "resolved" }),
+        makeIssue({ id: "TEST-ISS-002", severity: "high", status: "inprogress" }),
+        makeIssue({ id: "TEST-ISS-003", severity: "medium", status: "resolved" }),
       ],
     });
     const result = recommend(state, 10);
@@ -351,18 +351,18 @@ describe("recommend", () => {
     );
     // ISS-002 (inprogress high) included; ISS-001 + ISS-003 (resolved) excluded
     expect(issueRecs).toHaveLength(1);
-    expect(issueRecs[0]!.id).toBe("ISS-002");
+    expect(issueRecs[0]!.id).toBe("TEST-ISS-002");
     expect(issueRecs[0]!.reason).toContain("in-progress");
   });
 
   it("inprogress critical issue appears in critical_issue category", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", severity: "critical", status: "inprogress" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "critical", status: "inprogress" }),
       ],
     });
     const result = recommend(state, 10);
-    const critical = result.recommendations.find((r) => r.id === "ISS-001");
+    const critical = result.recommendations.find((r) => r.id === "TEST-ISS-001");
     expect(critical).toBeDefined();
     expect(critical!.category).toBe("critical_issue");
     expect(critical!.reason).toContain("in-progress");
@@ -371,8 +371,8 @@ describe("recommend", () => {
   it("newer issue ranks above older within same severity", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", severity: "medium", discoveredDate: "2026-03-10" }),
-        makeIssue({ id: "ISS-002", severity: "medium", discoveredDate: "2026-03-23" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "medium", discoveredDate: "2026-03-10" }),
+        makeIssue({ id: "TEST-ISS-002", severity: "medium", discoveredDate: "2026-03-23" }),
       ],
     });
     const result = recommend(state, 10);
@@ -381,8 +381,8 @@ describe("recommend", () => {
     );
     expect(openIssues).toHaveLength(2);
     // ISS-002 (newer) should rank above ISS-001 (older)
-    expect(openIssues[0]!.id).toBe("ISS-002");
-    expect(openIssues[1]!.id).toBe("ISS-001");
+    expect(openIssues[0]!.id).toBe("TEST-ISS-002");
+    expect(openIssues[1]!.id).toBe("TEST-ISS-001");
   });
 
   it("deterministic sort: items with same score tiebreak by category then ID", () => {
@@ -394,8 +394,8 @@ describe("recommend", () => {
     // With same severity/date, array order determines index → score.
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", severity: "medium", discoveredDate: "2026-03-11" }),
-        makeIssue({ id: "ISS-002", severity: "medium", discoveredDate: "2026-03-11" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "medium", discoveredDate: "2026-03-11" }),
+        makeIssue({ id: "TEST-ISS-002", severity: "medium", discoveredDate: "2026-03-11" }),
       ],
     });
     const result = recommend(state, 10);
@@ -403,16 +403,16 @@ describe("recommend", () => {
       (r) => r.category === "open_issue",
     );
     // ISS-001 is first in array → index 0 → score 300; ISS-002 → index 1 → score 299
-    expect(openIssues[0]!.id).toBe("ISS-001");
-    expect(openIssues[1]!.id).toBe("ISS-002");
+    expect(openIssues[0]!.id).toBe("TEST-ISS-001");
+    expect(openIssues[1]!.id).toBe("TEST-ISS-002");
     expect(openIssues[0]!.score).toBeGreaterThan(openIssues[1]!.score);
   });
 
   it("high-impact unblock requires >= 2 unblocks (1 is excluded)", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -426,8 +426,8 @@ describe("recommend", () => {
   it("count clamped to 1 when 0 is passed", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -456,11 +456,11 @@ describe("recommend", () => {
     const state = makeState({
       tickets: [
         // p1 (current): simple open ticket
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
         // p3 (future): unblocks 2 tickets
-        makeTicket({ id: "T-010", phase: "p3", order: 10, status: "open" }),
-        makeTicket({ id: "T-011", phase: "p3", order: 20, status: "open", blockedBy: ["T-010"] }),
-        makeTicket({ id: "T-012", phase: "p3", order: 30, status: "open", blockedBy: ["T-010"] }),
+        makeTicket({ id: "TEST-T-010", phase: "p3", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-011", phase: "p3", order: 20, status: "open", blockedBy: ["TEST-T-010"] }),
+        makeTicket({ id: "TEST-T-012", phase: "p3", order: 30, status: "open", blockedBy: ["TEST-T-010"] }),
       ],
       roadmap: makeRoadmap([
         makePhase({ id: "p1" }),
@@ -476,7 +476,7 @@ describe("recommend", () => {
     // T-010 gets high_impact_unblock (700) - penalty (2 phases * 50 = 100) = 600.
     // So T-010 still ranks above. With 3 phases ahead: 700 - 150 = 550. Still above.
     // The point is the GAP is reduced. Let's verify the penalty is applied.
-    const t010 = result.recommendations.find(r => r.id === "T-010");
+    const t010 = result.recommendations.find(r => r.id === "TEST-T-010");
     expect(t010).toBeDefined();
     expect(t010!.reason).toContain("future phase");
     expect(t010!.score).toBeLessThan(700); // penalized from 700
@@ -485,9 +485,9 @@ describe("recommend", () => {
   it("same-phase tickets not penalized", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", blockedBy: ["T-001"] }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, status: "open", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", blockedBy: ["TEST-T-001"] }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, status: "open", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -501,15 +501,15 @@ describe("recommend", () => {
   it("issues not affected by phase penalty", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
       ],
       issues: [
-        makeIssue({ id: "ISS-001", severity: "medium" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "medium" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" }), makePhase({ id: "p2" })]),
     });
     const result = recommend(state, 10);
-    const issue = result.recommendations.find(r => r.id === "ISS-001");
+    const issue = result.recommendations.find(r => r.id === "TEST-ISS-001");
     expect(issue).toBeDefined();
     expect(issue!.score).toBe(300); // no penalty
     expect(issue!.reason).not.toContain("future phase");
@@ -518,13 +518,13 @@ describe("recommend", () => {
   it("ticket with null phase not penalized", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open" }),
-        makeTicket({ id: "T-002", order: 10, status: "open", type: "chore" }), // null phase
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open" }),
+        makeTicket({ id: "TEST-T-002", order: 10, status: "open", type: "chore" }), // null phase
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10);
-    const nullPhase = result.recommendations.find(r => r.id === "T-002");
+    const nullPhase = result.recommendations.find(r => r.id === "TEST-T-002");
     expect(nullPhase).toBeDefined();
     expect(nullPhase!.reason).not.toContain("future phase");
   });
@@ -534,17 +534,17 @@ describe("recommend", () => {
   it("ticket in handover What's Next gets boosted", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", status: "open", type: "chore" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", status: "open", type: "chore" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
-    const handover = "## What Was Done\nCompleted T-099.\n\n## What's Next\n- T-001: do this thing\n";
+    const handover = "## What Was Done\nCompleted TEST-T-099.\n\n## What's Next\n- TEST-T-001: do this thing\n";
     // Both T-001 and T-002 appear via quick_win (chore) or phase_momentum
     const withHandover = recommend(state, 10, { latestHandoverContent: handover });
     const without = recommend(state, 10);
-    const t1With = withHandover.recommendations.find((r) => r.id === "T-001");
-    const t1Without = without.recommendations.find((r) => r.id === "T-001");
+    const t1With = withHandover.recommendations.find((r) => r.id === "TEST-T-001");
+    const t1Without = without.recommendations.find((r) => r.id === "TEST-T-001");
     expect(t1With).toBeDefined();
     expect(t1With!.score).toBeGreaterThan(t1Without!.score);
     expect(t1With!.reason).toContain("handover context");
@@ -553,41 +553,41 @@ describe("recommend", () => {
   it("complete ticket in handover What Was Done gets no boost", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", status: "complete" }),
-        makeTicket({ id: "T-002", phase: "p1", status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", status: "open" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
-    const handover = "## What Was Done\nCompleted T-001.\n\n## What's Next\nNothing specific.";
+    const handover = "## What Was Done\nCompleted TEST-T-001.\n\n## What's Next\nNothing specific.";
     const result = recommend(state, 10, { latestHandoverContent: handover });
-    const t1 = result.recommendations.find((r) => r.id === "T-001");
+    const t1 = result.recommendations.find((r) => r.id === "TEST-T-001");
     expect(t1).toBeUndefined(); // complete tickets are never recommended
   });
 
   it("no handover content = no boost (graceful degradation)", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
-    const withHandover = recommend(state, 10, { latestHandoverContent: "## What's Next\n- T-001" });
+    const withHandover = recommend(state, 10, { latestHandoverContent: "## What's Next\n- TEST-T-001" });
     const without = recommend(state, 10);
-    const scoreWith = withHandover.recommendations.find((r) => r.id === "T-001")!.score;
-    const scoreWithout = without.recommendations.find((r) => r.id === "T-001")!.score;
+    const scoreWith = withHandover.recommendations.find((r) => r.id === "TEST-T-001")!.score;
+    const scoreWithout = without.recommendations.find((r) => r.id === "TEST-T-001")!.score;
     expect(scoreWith).toBeGreaterThan(scoreWithout);
   });
 
   it("fallback full-doc scan only boosts open tickets", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", status: "inprogress" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", status: "inprogress" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     // No actionable heading -- falls back to full-doc scan
-    const handover = "Some notes about T-001 and T-002 progress.";
+    const handover = "Some notes about TEST-T-001 and TEST-T-002 progress.";
     const result = recommend(state, 10, { latestHandoverContent: handover });
-    const t1 = result.recommendations.find((r) => r.id === "T-001");
+    const t1 = result.recommendations.find((r) => r.id === "TEST-T-001");
     // T-001 (open) should get boost from fallback, T-002 (inprogress) should not
     expect(t1!.reason).toContain("handover context");
   });
@@ -597,11 +597,11 @@ describe("recommend", () => {
   it("emits debt-trend when open issues grew >25% and >=2 absolute", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", status: "open" }),
-        makeIssue({ id: "ISS-002", status: "open" }),
-        makeIssue({ id: "ISS-003", status: "open" }),
-        makeIssue({ id: "ISS-004", status: "open" }),
-        makeIssue({ id: "ISS-005", status: "open" }),
+        makeIssue({ id: "TEST-ISS-001", status: "open" }),
+        makeIssue({ id: "TEST-ISS-002", status: "open" }),
+        makeIssue({ id: "TEST-ISS-003", status: "open" }),
+        makeIssue({ id: "TEST-ISS-004", status: "open" }),
+        makeIssue({ id: "TEST-ISS-005", status: "open" }),
       ],
     });
     // Previous: 3 open, now: 5 open = 67% growth, +2 absolute
@@ -615,10 +615,10 @@ describe("recommend", () => {
   it("no debt-trend when growth is under 25%", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", status: "open" }),
-        makeIssue({ id: "ISS-002", status: "open" }),
-        makeIssue({ id: "ISS-003", status: "open" }),
-        makeIssue({ id: "ISS-004", status: "open" }),
+        makeIssue({ id: "TEST-ISS-001", status: "open" }),
+        makeIssue({ id: "TEST-ISS-002", status: "open" }),
+        makeIssue({ id: "TEST-ISS-003", status: "open" }),
+        makeIssue({ id: "TEST-ISS-004", status: "open" }),
       ],
     });
     // Previous: 4 open, now: 4 open = 0% growth
@@ -630,8 +630,8 @@ describe("recommend", () => {
   it("no debt-trend when absolute growth is under 2", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", status: "open" }),
-        makeIssue({ id: "ISS-002", status: "open" }),
+        makeIssue({ id: "TEST-ISS-001", status: "open" }),
+        makeIssue({ id: "TEST-ISS-002", status: "open" }),
       ],
     });
     // Previous: 1, now: 2 = 100% growth but only +1 absolute
@@ -643,11 +643,11 @@ describe("recommend", () => {
   it("no debt-trend at exactly 25% growth (strict >)", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", status: "open" }),
-        makeIssue({ id: "ISS-002", status: "open" }),
-        makeIssue({ id: "ISS-003", status: "open" }),
-        makeIssue({ id: "ISS-004", status: "open" }),
-        makeIssue({ id: "ISS-005", status: "open" }),
+        makeIssue({ id: "TEST-ISS-001", status: "open" }),
+        makeIssue({ id: "TEST-ISS-002", status: "open" }),
+        makeIssue({ id: "TEST-ISS-003", status: "open" }),
+        makeIssue({ id: "TEST-ISS-004", status: "open" }),
+        makeIssue({ id: "TEST-ISS-005", status: "open" }),
       ],
     });
     // Previous: 4, now: 5 = exactly 25% growth, +1 absolute (under min 2)
@@ -659,14 +659,14 @@ describe("recommend", () => {
   it("debt-trend triggers at 26% growth with >=2 absolute", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", status: "open" }),
-        makeIssue({ id: "ISS-002", status: "open" }),
-        makeIssue({ id: "ISS-003", status: "open" }),
-        makeIssue({ id: "ISS-004", status: "open" }),
-        makeIssue({ id: "ISS-005", status: "open" }),
-        makeIssue({ id: "ISS-006", status: "open" }),
-        makeIssue({ id: "ISS-007", status: "open" }),
-        makeIssue({ id: "ISS-008", status: "open" }),
+        makeIssue({ id: "TEST-ISS-001", status: "open" }),
+        makeIssue({ id: "TEST-ISS-002", status: "open" }),
+        makeIssue({ id: "TEST-ISS-003", status: "open" }),
+        makeIssue({ id: "TEST-ISS-004", status: "open" }),
+        makeIssue({ id: "TEST-ISS-005", status: "open" }),
+        makeIssue({ id: "TEST-ISS-006", status: "open" }),
+        makeIssue({ id: "TEST-ISS-007", status: "open" }),
+        makeIssue({ id: "TEST-ISS-008", status: "open" }),
       ],
     });
     // Previous: 6, now: 8 = 33% growth, +2 absolute
@@ -678,9 +678,9 @@ describe("recommend", () => {
   it("no debt-trend without previousOpenIssueCount (graceful skip)", () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", status: "open" }),
-        makeIssue({ id: "ISS-002", status: "open" }),
-        makeIssue({ id: "ISS-003", status: "open" }),
+        makeIssue({ id: "TEST-ISS-001", status: "open" }),
+        makeIssue({ id: "TEST-ISS-002", status: "open" }),
+        makeIssue({ id: "TEST-ISS-003", status: "open" }),
       ],
     });
     const result = recommend(state, 10);
@@ -705,7 +705,7 @@ describe("federation recommendations", () => {
   it("red blocker ranks above in-progress ticket", () => {
     const state = makeState({
       config: orchestratorConfig,
-      tickets: [makeTicket({ id: "T-001", status: "inprogress" })],
+      tickets: [makeTicket({ id: "TEST-T-001", status: "inprogress" })],
     });
     const fedState = makeFedState([
       makeFedNode({ name: "engine", health: "red", scanSummary: makeScanSummary() }),
@@ -713,7 +713,7 @@ describe("federation recommendations", () => {
     ]);
     const result = recommend(state, 10, { federationState: fedState });
     const redIdx = result.recommendations.findIndex((r) => r.id === "FED_RED_engine");
-    const ipIdx = result.recommendations.findIndex((r) => r.id === "T-001");
+    const ipIdx = result.recommendations.findIndex((r) => r.id === "TEST-T-001");
     expect(redIdx).toBeGreaterThanOrEqual(0);
     expect(ipIdx).toBeGreaterThanOrEqual(0);
     expect(redIdx).toBeLessThan(ipIdx);
@@ -812,7 +812,7 @@ describe("federation recommendations", () => {
   it("federation and local recs coexist sorted by score", () => {
     const state = makeState({
       config: orchestratorConfig,
-      tickets: [makeTicket({ id: "T-001", status: "inprogress" })],
+      tickets: [makeTicket({ id: "TEST-T-001", status: "inprogress" })],
     });
     const fedState = makeFedState([
       makeFedNode({ name: "engine", health: "red", scanSummary: makeScanSummary() }),
@@ -876,25 +876,25 @@ describe("crossNodeRefStatuses filtering", () => {
   it("excludes cross-node-blocked in-progress tickets", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "inprogress", crossNodeBlockedBy: ["core:T-010"] }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "inprogress", crossNodeBlockedBy: ["core:T-010"] }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10, { crossNodeRefStatuses: { "core:T-010": "open" } });
-    expect(result.recommendations.find((r) => r.id === "T-001")).toBeUndefined();
+    expect(result.recommendations.find((r) => r.id === "TEST-T-001")).toBeUndefined();
   });
 
   it("includes in-progress tickets when cross-node refs are complete", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "inprogress", crossNodeBlockedBy: ["core:T-010"] }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "inprogress", crossNodeBlockedBy: ["core:T-010"] }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", type: "chore" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10, { crossNodeRefStatuses: { "core:T-010": "complete" } });
-    const rec = result.recommendations.find((r) => r.id === "T-001");
+    const rec = result.recommendations.find((r) => r.id === "TEST-T-001");
     expect(rec).toBeDefined();
     expect(rec?.category).toBe("inprogress_ticket");
   });
@@ -902,58 +902,58 @@ describe("crossNodeRefStatuses filtering", () => {
   it("excludes cross-node-blocked tickets from high_impact_unblock", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open", crossNodeBlockedBy: ["core:T-010"] }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", blockedBy: ["T-001"] }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, status: "open", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open", crossNodeBlockedBy: ["core:T-010"] }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", blockedBy: ["TEST-T-001"] }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, status: "open", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10, { crossNodeRefStatuses: { "core:T-010": "open" } });
     const unblockRecs = result.recommendations.filter((r) => r.category === "high_impact_unblock");
-    expect(unblockRecs.find((r) => r.id === "T-001")).toBeUndefined();
+    expect(unblockRecs.find((r) => r.id === "TEST-T-001")).toBeUndefined();
   });
 
   it("includes cross-node-unblocked tickets in high_impact_unblock", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, status: "open", crossNodeBlockedBy: ["core:T-010"] }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, status: "open", blockedBy: ["T-001"] }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, status: "open", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, status: "open", crossNodeBlockedBy: ["core:T-010"] }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, status: "open", blockedBy: ["TEST-T-001"] }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, status: "open", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10, { crossNodeRefStatuses: { "core:T-010": "complete" } });
     const unblockRecs = result.recommendations.filter((r) => r.category === "high_impact_unblock");
-    expect(unblockRecs.find((r) => r.id === "T-001")).toBeDefined();
+    expect(unblockRecs.find((r) => r.id === "TEST-T-001")).toBeDefined();
   });
 
   it("excludes cross-node-blocked chores from quick_win", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, type: "chore", status: "open", crossNodeBlockedBy: ["api:T-005"] }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, type: "chore", status: "open" }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, type: "chore", status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, type: "chore", status: "open", crossNodeBlockedBy: ["api:T-005"] }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, type: "chore", status: "open" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, type: "chore", status: "open" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10, { crossNodeRefStatuses: { "api:T-005": "inprogress" } });
-    expect(result.recommendations.find((r) => r.id === "T-001")).toBeUndefined();
-    const t002 = result.recommendations.find((r) => r.id === "T-002");
+    expect(result.recommendations.find((r) => r.id === "TEST-T-001")).toBeUndefined();
+    const t002 = result.recommendations.find((r) => r.id === "TEST-T-002");
     expect(t002).toBeDefined();
   });
 
   it("treats missing cache as blocked (conservative)", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10, type: "chore", status: "open", crossNodeBlockedBy: ["core:T-010"] }),
-        makeTicket({ id: "T-002", phase: "p1", order: 20, type: "chore", status: "open" }),
-        makeTicket({ id: "T-003", phase: "p1", order: 30, type: "chore", status: "open" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10, type: "chore", status: "open", crossNodeBlockedBy: ["core:T-010"] }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 20, type: "chore", status: "open" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", order: 30, type: "chore", status: "open" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const result = recommend(state, 10);
-    expect(result.recommendations.find((r) => r.id === "T-001")).toBeUndefined();
-    const t002 = result.recommendations.find((r) => r.id === "T-002");
+    expect(result.recommendations.find((r) => r.id === "TEST-T-001")).toBeUndefined();
+    const t002 = result.recommendations.find((r) => r.id === "TEST-T-002");
     expect(t002).toBeDefined();
   });
 });

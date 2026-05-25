@@ -109,6 +109,9 @@ import { handleReference } from "./commands/reference.js";
 // Selftest command
 import { handleSelftest } from "./commands/selftest.js";
 
+// Namespace command
+import { handleNamespaceSet, handleNamespaceGet } from "./commands/namespace.js";
+
 function addNodeOption<T>(y: Argv<T>): Argv<T & { node: string | undefined }> {
   return y.option("node", {
     type: "string",
@@ -238,6 +241,56 @@ export function registerMigrateCommand(yargs: Argv): Argv {
       const result = await handleMigrate(root, format, { dryRun });
       writeOutput(result.output);
       if (result.errorCode) {
+        process.exitCode = ExitCode.USER_ERROR;
+      }
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// migrate-namespace
+// ---------------------------------------------------------------------------
+
+export function registerMigrateNamespaceCommand(yargs: Argv): Argv {
+  return yargs.command(
+    "migrate-namespace <ns>",
+    "Rename all old-format ticket/issue IDs (T-NNN, ISS-NNN) to namespaced format ({NS}-T-NNN, {NS}-ISS-NNN)",
+    (y) =>
+      y
+        .positional("ns", {
+          type: "string",
+          demandOption: true,
+          describe: "Target namespace (3-12 uppercase alphanumeric characters)",
+        })
+        .option("dry-run", {
+          type: "boolean",
+          default: false,
+          describe: "Show proposed changes without writing",
+        }),
+    async (argv) => {
+      const { handleMigrateNamespace } = await import("./commands/migrate-namespace.js");
+      const root = (await import("../core/project-root-discovery.js")).discoverProjectRoot();
+      if (!root) {
+        writeOutput(formatError("not_found", "No .story/ project found.", "md"));
+        process.exitCode = ExitCode.USER_ERROR;
+        return;
+      }
+      try {
+        const result = await handleMigrateNamespace(
+          argv.ns as string,
+          root,
+          { dryRun: argv["dry-run"] as boolean },
+        );
+        writeOutput(result.output);
+        if (result.errorCode) process.exitCode = ExitCode.USER_ERROR;
+      } catch (err: unknown) {
+        if (err instanceof CliValidationError) {
+          writeOutput(formatError(err.code, err.message, "md"));
+          process.exitCode = ExitCode.USER_ERROR;
+          return;
+        }
+        const message = err instanceof Error ? err.message : String(err);
+        writeOutput(formatError("io_error", message, "md"));
         process.exitCode = ExitCode.USER_ERROR;
       }
     },
@@ -2999,6 +3052,62 @@ export function registerSelftestCommand(yargs: Argv): Argv {
         process.exitCode = ExitCode.USER_ERROR;
       }
     },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// namespace
+// ---------------------------------------------------------------------------
+
+export function registerNamespaceCommand(yargs: Argv): Argv {
+  return yargs.command(
+    "namespace",
+    "Manage the local ticket ID namespace",
+    (y) =>
+      y
+        .command(
+          "set <ns>",
+          "Set the namespace for this clone (stored in .story/.local.json)",
+          (y2) =>
+            y2.positional("ns", {
+              type: "string",
+              demandOption: true,
+              describe: "Namespace (3-12 uppercase alphanumeric characters, e.g. TMP7654)",
+            }),
+          async (argv) => {
+            const root = (
+              await import("../core/project-root-discovery.js")
+            ).discoverProjectRoot();
+            if (!root) {
+              writeOutput(formatError("not_found", "No .story/ project found.", "md"));
+              process.exitCode = ExitCode.USER_ERROR;
+              return;
+            }
+            const result = await handleNamespaceSet(argv.ns as string, root);
+            writeOutput(result.output);
+            if (result.errorCode) process.exitCode = ExitCode.USER_ERROR;
+          },
+        )
+        .command(
+          "get",
+          "Show the current namespace",
+          () => {},
+          async () => {
+            const root = (
+              await import("../core/project-root-discovery.js")
+            ).discoverProjectRoot();
+            if (!root) {
+              writeOutput(formatError("not_found", "No .story/ project found.", "md"));
+              process.exitCode = ExitCode.USER_ERROR;
+              return;
+            }
+            const result = await handleNamespaceGet(root);
+            writeOutput(result.output);
+            if (result.errorCode) process.exitCode = ExitCode.USER_ERROR;
+          },
+        )
+        .demandCommand(1, "Use: namespace set <ns> | namespace get"),
+    () => {},
   );
 }
 

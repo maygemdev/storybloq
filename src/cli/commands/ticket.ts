@@ -1,5 +1,6 @@
 import { nextTicket, nextTickets, blockedTickets } from "../../core/queries.js";
 import { nextTicketID, nextOrder } from "../../core/id-allocation.js";
+import { getNamespace } from "../../core/local-config-loader.js";
 import { validateProject } from "../../core/validation.js";
 import { ProjectState } from "../../core/project-state.js";
 import {
@@ -267,7 +268,8 @@ export async function handleTicketCreate(
       validateParentTicket(args.parentTicket, "", state);
     }
 
-    const id = nextTicketID(state.tickets);
+    const namespace = await getNamespace(root);
+    const id = nextTicketID(state.tickets, namespace);
     const order = nextOrder(args.phase, state);
     const ticket: Ticket = {
       id,

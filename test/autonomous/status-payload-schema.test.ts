@@ -32,8 +32,8 @@ function makeFullSessionState(): SessionState {
   return {
     sessionId: "e1536ebc-746a-42ba-b41e-f037cb4c880b",
     state: "CODE_REVIEW",
-    ticket: { id: "T-042", title: "Add telemetry substrate", risk: "medium" },
-    completedTickets: [{ id: "T-040" }, { id: "T-041" }],
+    ticket: { id: "TEST-T-042", title: "Add telemetry substrate", risk: "medium" },
+    completedTickets: [{ id: "TEST-T-040" }, { id: "TEST-T-041" }],
     contextPressure: { level: "low" },
     git: { branch: "telemetry-substrate" },
     lastGuideCall: "2026-04-11T09:58:00Z",
@@ -126,10 +126,10 @@ describe("StatusPayload schema foundation (T-259)", () => {
     it("includes targetWork when session has targeted work items", () => {
       const session: SessionState = {
         ...makeFullSessionState(),
-        targetWork: ["T-042", "T-043", "ISS-010"],
+        targetWork: ["TEST-T-042", "TEST-T-043", "TEST-ISS-010"],
       };
       const payload = buildActivePayload(session);
-      expect(payload.targetWork).toEqual(["T-042", "T-043", "ISS-010"]);
+      expect(payload.targetWork).toEqual(["TEST-T-042", "TEST-T-043", "TEST-ISS-010"]);
     });
 
     it("sets targetWork to null when session has no targets", () => {
@@ -148,14 +148,14 @@ describe("StatusPayload schema foundation (T-259)", () => {
       const session: SessionState = {
         ...makeFullSessionState(),
         currentIssue: {
-          id: "ISS-010",
+          id: "TEST-ISS-010",
           title: "Flaky test in auth module",
           severity: "high",
         },
       };
       const payload = buildActivePayload(session);
       expect(payload.currentIssue).toEqual({
-        id: "ISS-010",
+        id: "TEST-ISS-010",
         title: "Flaky test in auth module",
         severity: "high",
       });

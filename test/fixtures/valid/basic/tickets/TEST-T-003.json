@@ -1,5 +1,5 @@
 {
-  "id": "T-003",
+  "id": "TEST-T-003",
   "title": "CLI features umbrella",
   "description": "Umbrella ticket for all CLI feature work.",
   "type": "task",

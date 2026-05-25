@@ -19,6 +19,7 @@ import { CliValidationError } from "../../../src/cli/helpers.js";
 import { initProject } from "../../../src/core/init.js";
 import { loadProject } from "../../../src/core/project-loader.js";
 import { makeState, makeTicket, makeRoadmap, makePhase } from "../../core/test-factories.js";
+import { setTestNamespace } from "../../helpers.js";
 import type { CommandContext } from "../../../src/cli/run.js";
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
@@ -37,77 +38,77 @@ describe("handleTicketList", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", title: "First" }),
-          makeTicket({ id: "T-002", phase: "p1", title: "Second" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", title: "First" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", title: "Second" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
     const result = handleTicketList({}, ctx);
-    expect(result.output).toContain("T-001");
-    expect(result.output).toContain("T-002");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).toContain("TEST-T-002");
   });
 
   it("filters by status", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", status: "open" }),
-          makeTicket({ id: "T-002", phase: "p1", status: "complete" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", status: "complete" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
     const result = handleTicketList({ status: "open" }, ctx);
-    expect(result.output).toContain("T-001");
-    expect(result.output).not.toContain("T-002");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).not.toContain("TEST-T-002");
   });
 
   it("filters by phase", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1" }),
-          makeTicket({ id: "T-002", phase: "p2" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1" }),
+          makeTicket({ id: "TEST-T-002", phase: "p2" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" }), makePhase({ id: "p2" })]),
       }),
     });
     const result = handleTicketList({ phase: "p1" }, ctx);
-    expect(result.output).toContain("T-001");
-    expect(result.output).not.toContain("T-002");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).not.toContain("TEST-T-002");
   });
 
   it("filters by type", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", type: "task" }),
-          makeTicket({ id: "T-002", phase: "p1", type: "chore" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", type: "task" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", type: "chore" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
     const result = handleTicketList({ type: "task" }, ctx);
-    expect(result.output).toContain("T-001");
-    expect(result.output).not.toContain("T-002");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).not.toContain("TEST-T-002");
   });
 
   it("filters with multiple criteria", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", status: "open", type: "task" }),
-          makeTicket({ id: "T-002", phase: "p1", status: "complete", type: "task" }),
-          makeTicket({ id: "T-003", phase: "p2", status: "open", type: "task" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", status: "open", type: "task" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", status: "complete", type: "task" }),
+          makeTicket({ id: "TEST-T-003", phase: "p2", status: "open", type: "task" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" }), makePhase({ id: "p2" })]),
       }),
     });
     const result = handleTicketList({ status: "open", phase: "p1" }, ctx);
-    expect(result.output).toContain("T-001");
-    expect(result.output).not.toContain("T-002");
-    expect(result.output).not.toContain("T-003");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).not.toContain("TEST-T-002");
+    expect(result.output).not.toContain("TEST-T-003");
   });
 
   it("throws on invalid status filter", () => {
@@ -129,19 +130,19 @@ describe("handleTicketGet", () => {
   it("returns ticket when found", () => {
     const ctx = makeCtx({
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", title: "My Ticket" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", title: "My Ticket" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
-    const result = handleTicketGet("T-001", ctx);
-    expect(result.output).toContain("T-001");
+    const result = handleTicketGet("TEST-T-001", ctx);
+    expect(result.output).toContain("TEST-T-001");
     expect(result.output).toContain("My Ticket");
     expect(result.exitCode).toBeUndefined();
   });
 
   it("returns not_found when missing", () => {
     const ctx = makeCtx();
-    const result = handleTicketGet("T-999", ctx);
+    const result = handleTicketGet("TEST-T-999", ctx);
     expect(result.output).toContain("not_found");
     expect(result.exitCode).toBe(ExitCode.USER_ERROR);
   });
@@ -150,14 +151,14 @@ describe("handleTicketGet", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", title: "Umbrella" }),
-          makeTicket({ id: "T-002", phase: "p1", parentTicket: "T-001" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", title: "Umbrella" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", parentTicket: "TEST-T-001" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
     // T-001 is an umbrella (has children), but get should still return it
-    const result = handleTicketGet("T-001", ctx);
+    const result = handleTicketGet("TEST-T-001", ctx);
     expect(result.output).toContain("Umbrella");
   });
 });
@@ -166,12 +167,12 @@ describe("handleTicketNext", () => {
   it("returns found ticket with exit 0", () => {
     const ctx = makeCtx({
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
     const result = handleTicketNext(ctx);
-    expect(result.output).toContain("T-001");
+    expect(result.output).toContain("TEST-T-001");
     expect(result.exitCode).toBe(ExitCode.OK);
   });
 
@@ -179,7 +180,7 @@ describe("handleTicketNext", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", status: "open", blockedBy: ["T-999"] }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", status: "open", blockedBy: ["TEST-T-999"] }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
@@ -194,14 +195,14 @@ describe("handleTicketBlocked", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", status: "open" }),
-          makeTicket({ id: "T-002", phase: "p1", status: "open", blockedBy: ["T-999"] }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", status: "open", blockedBy: ["TEST-T-999"] }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
     const result = handleTicketBlocked(ctx);
-    expect(result.output).toContain("T-002");
+    expect(result.output).toContain("TEST-T-002");
     expect(result.exitCode).toBeUndefined();
   });
 });
@@ -219,12 +220,13 @@ describe("handleTicketCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleTicketCreate(
       { title: "New Ticket", type: "task", phase: "p0", description: "desc", blockedBy: [], parentTicket: null },
       "md", dir,
     );
-    expect(result.output).toContain("Created ticket T-001");
-    const raw = await readFile(join(dir, ".story", "tickets", "T-001.json"), "utf-8");
+    expect(result.output).toContain("Created ticket TEST-T-001");
+    const raw = await readFile(join(dir, ".story", "tickets", "TEST-T-001.json"), "utf-8");
     const ticket = JSON.parse(raw);
     expect(ticket.title).toBe("New Ticket");
     expect(ticket.status).toBe("open");
@@ -234,6 +236,7 @@ describe("handleTicketCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "First", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
@@ -242,26 +245,28 @@ describe("handleTicketCreate", () => {
       { title: "Second", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
     );
-    expect(result.output).toContain("T-002");
+    expect(result.output).toContain("TEST-T-002");
   });
 
   it("returns valid JSON", async () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleTicketCreate(
       { title: "Test", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "json", dir,
     );
     const parsed = JSON.parse(result.output);
     expect(parsed.version).toBe(1);
-    expect(parsed.data.id).toBe("T-001");
+    expect(parsed.data.id).toBe("TEST-T-001");
   });
 
   it("rejects invalid type", async () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handleTicketCreate(
         { title: "Test", type: "invalid", phase: "p0", description: "", blockedBy: [], parentTicket: null },
@@ -274,6 +279,7 @@ describe("handleTicketCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handleTicketCreate(
         { title: "Test", type: "task", phase: "nonexistent", description: "", blockedBy: [], parentTicket: null },
@@ -286,6 +292,7 @@ describe("handleTicketCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleTicketCreate(
       { title: "Test", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "json", dir,
@@ -304,6 +311,7 @@ describe("handleTicketUpdate", () => {
 
   async function setupProject(dir: string) {
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "Original", type: "task", phase: "p0", description: "orig desc", blockedBy: [], parentTicket: null },
       "md", dir,
@@ -314,15 +322,15 @@ describe("handleTicketUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-update-"));
     tmpDirs.push(dir);
     await setupProject(dir);
-    const result = await handleTicketUpdate("T-001", { title: "Updated" }, "md", dir);
-    expect(result.output).toContain("Updated ticket T-001: Updated");
+    const result = await handleTicketUpdate("TEST-T-001", { title: "Updated" }, "md", dir);
+    expect(result.output).toContain("Updated ticket TEST-T-001: Updated");
   });
 
   it("status→complete sets completedDate", async () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-update-"));
     tmpDirs.push(dir);
     await setupProject(dir);
-    const result = await handleTicketUpdate("T-001", { status: "complete" }, "json", dir);
+    const result = await handleTicketUpdate("TEST-T-001", { status: "complete" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.status).toBe("complete");
     expect(parsed.data.completedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -332,8 +340,8 @@ describe("handleTicketUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-update-"));
     tmpDirs.push(dir);
     await setupProject(dir);
-    await handleTicketUpdate("T-001", { status: "complete" }, "md", dir);
-    const result = await handleTicketUpdate("T-001", { status: "open" }, "json", dir);
+    await handleTicketUpdate("TEST-T-001", { status: "complete" }, "md", dir);
+    const result = await handleTicketUpdate("TEST-T-001", { status: "open" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.completedDate).toBeNull();
   });
@@ -342,8 +350,8 @@ describe("handleTicketUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-update-"));
     tmpDirs.push(dir);
     await setupProject(dir);
-    await handleTicketUpdate("T-001", { status: "complete" }, "md", dir);
-    const result = await handleTicketUpdate("T-001", { title: "Renamed" }, "json", dir);
+    await handleTicketUpdate("TEST-T-001", { status: "complete" }, "md", dir);
+    const result = await handleTicketUpdate("TEST-T-001", { title: "Renamed" }, "json", dir);
     const parsed = JSON.parse(result.output);
     // Status not changed, so date should be preserved
     expect(parsed.data.completedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
@@ -353,8 +361,9 @@ describe("handleTicketUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-update-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
-      handleTicketUpdate("T-999", { title: "X" }, "md", dir),
+      handleTicketUpdate("TEST-T-999", { title: "X" }, "md", dir),
     ).rejects.toThrow("not found");
   });
 
@@ -362,7 +371,7 @@ describe("handleTicketUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-update-"));
     tmpDirs.push(dir);
     await setupProject(dir);
-    const result = await handleTicketUpdate("T-001", { phase: null }, "json", dir);
+    const result = await handleTicketUpdate("TEST-T-001", { phase: null }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.phase).toBeNull();
   });
@@ -376,9 +385,9 @@ describe("handleTicketUpdate", () => {
       { title: "Blocker", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
     );
-    const result = await handleTicketUpdate("T-001", { blockedBy: ["T-002"] }, "json", dir);
+    const result = await handleTicketUpdate("TEST-T-001", { blockedBy: ["TEST-T-002"] }, "json", dir);
     const parsed = JSON.parse(result.output);
-    expect(parsed.data.blockedBy).toEqual(["T-002"]);
+    expect(parsed.data.blockedBy).toEqual(["TEST-T-002"]);
   });
 
   it("preserves passthrough fields", async () => {
@@ -386,13 +395,13 @@ describe("handleTicketUpdate", () => {
     tmpDirs.push(dir);
     await setupProject(dir);
     // Write a ticket with an extra field
-    const raw = await readFile(join(dir, ".story", "tickets", "T-001.json"), "utf-8");
+    const raw = await readFile(join(dir, ".story", "tickets", "TEST-T-001.json"), "utf-8");
     const ticket = JSON.parse(raw);
     ticket.customField = "preserved";
     const { writeFile: wf } = await import("node:fs/promises");
-    await wf(join(dir, ".story", "tickets", "T-001.json"), JSON.stringify(ticket, null, 2));
+    await wf(join(dir, ".story", "tickets", "TEST-T-001.json"), JSON.stringify(ticket, null, 2));
     // Update title — should preserve customField
-    const result = await handleTicketUpdate("T-001", { title: "New Title" }, "json", dir);
+    const result = await handleTicketUpdate("TEST-T-001", { title: "New Title" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.customField).toBe("preserved");
   });
@@ -401,7 +410,7 @@ describe("handleTicketUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-update-"));
     tmpDirs.push(dir);
     await setupProject(dir);
-    const result = await handleTicketUpdate("T-001", { type: "feature" }, "json", dir);
+    const result = await handleTicketUpdate("TEST-T-001", { type: "feature" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.type).toBe("feature");
   });
@@ -411,7 +420,7 @@ describe("handleTicketUpdate", () => {
     tmpDirs.push(dir);
     await setupProject(dir);
     await expect(
-      handleTicketUpdate("T-001", { type: "invalid" }, "md", dir),
+      handleTicketUpdate("TEST-T-001", { type: "invalid" }, "md", dir),
     ).rejects.toThrow("Unknown ticket type");
   });
 });
@@ -425,6 +434,7 @@ describe("handleTicketMeta", () => {
 
   async function setupProject(dir: string) {
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "Original", type: "task", phase: "p0", description: "orig desc", blockedBy: [], parentTicket: null },
       "md", dir,
@@ -447,10 +457,10 @@ describe("handleTicketMeta", () => {
     tmpDirs.push(dir);
     await setupProject(dir);
 
-    const setResult = await handleTicketMetaSet("T-001", "labels", ["frontend", "qa"], "json", dir);
+    const setResult = await handleTicketMetaSet("TEST-T-001", "labels", ["frontend", "qa"], "json", dir);
     expect(JSON.parse(setResult.output).data.labels).toEqual(["frontend", "qa"]);
 
-    const getResult = handleTicketMetaGet("T-001", "labels", await loadCtx(dir));
+    const getResult = handleTicketMetaGet("TEST-T-001", "labels", await loadCtx(dir));
     expect(JSON.parse(getResult.output).data).toEqual(["frontend", "qa"]);
   });
 
@@ -459,8 +469,8 @@ describe("handleTicketMeta", () => {
     tmpDirs.push(dir);
     await setupProject(dir);
 
-    await handleTicketMetaSet("T-001", "integrations.linearIssue", "ABC-123", "json", dir);
-    const getResult = handleTicketMetaGet("T-001", "integrations", await loadCtx(dir));
+    await handleTicketMetaSet("TEST-T-001", "integrations.linearIssue", "ABC-123", "json", dir);
+    const getResult = handleTicketMetaGet("TEST-T-001", "integrations", await loadCtx(dir));
     expect(JSON.parse(getResult.output).data).toEqual({ linearIssue: "ABC-123" });
   });
 
@@ -469,8 +479,8 @@ describe("handleTicketMeta", () => {
     tmpDirs.push(dir);
     await setupProject(dir);
 
-    await handleTicketMetaSet("T-001", "priority", "high", "json", dir);
-    const getResult = handleTicketMetaGet("T-001", undefined, await loadCtx(dir));
+    await handleTicketMetaSet("TEST-T-001", "priority", "high", "json", dir);
+    const getResult = handleTicketMetaGet("TEST-T-001", undefined, await loadCtx(dir));
     const metadata = JSON.parse(getResult.output).data;
     expect(metadata).toEqual({ priority: "high" });
     expect(metadata.title).toBeUndefined();
@@ -482,8 +492,8 @@ describe("handleTicketMeta", () => {
     tmpDirs.push(dir);
     await setupProject(dir);
 
-    await handleTicketMetaSet("T-001", "integrations.linearIssue", "ABC-123", "json", dir);
-    const unsetResult = await handleTicketMetaUnset("T-001", "integrations.linearIssue", "json", dir);
+    await handleTicketMetaSet("TEST-T-001", "integrations.linearIssue", "ABC-123", "json", dir);
+    const unsetResult = await handleTicketMetaUnset("TEST-T-001", "integrations.linearIssue", "json", dir);
     expect(JSON.parse(unsetResult.output).data.integrations).toEqual({});
   });
 
@@ -493,7 +503,7 @@ describe("handleTicketMeta", () => {
     await setupProject(dir);
 
     await expect(
-      handleTicketMetaSet("T-001", "status", "complete", "json", dir),
+      handleTicketMetaSet("TEST-T-001", "status", "complete", "json", dir),
     ).rejects.toThrow(CliValidationError);
   });
 
@@ -502,7 +512,7 @@ describe("handleTicketMeta", () => {
     tmpDirs.push(dir);
     await setupProject(dir);
 
-    const result = handleTicketMetaGet("T-001", "missing", await loadCtx(dir));
+    const result = handleTicketMetaGet("TEST-T-001", "missing", await loadCtx(dir));
     expect(result.exitCode).toBe(ExitCode.USER_ERROR);
     expect(result.output).toContain("not_found");
   });
@@ -519,40 +529,43 @@ describe("handleTicketDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "Doomed", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
     );
-    const result = await handleTicketDelete("T-001", false, "md", dir);
-    expect(result.output).toContain("Deleted ticket T-001");
+    const result = await handleTicketDelete("TEST-T-001", false, "md", dir);
+    expect(result.output).toContain("Deleted ticket TEST-T-001");
   });
 
   it("--force bypasses ref checks", async () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "Blocker", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
     );
     await handleTicketCreate(
-      { title: "Blocked", type: "task", phase: "p0", description: "", blockedBy: ["T-001"], parentTicket: null },
+      { title: "Blocked", type: "task", phase: "p0", description: "", blockedBy: ["TEST-T-001"], parentTicket: null },
       "md", dir,
     );
     // Normal delete would fail (T-002 references T-001)
-    const result = await handleTicketDelete("T-001", true, "md", dir);
-    expect(result.output).toContain("Deleted ticket T-001");
+    const result = await handleTicketDelete("TEST-T-001", true, "md", dir);
+    expect(result.output).toContain("Deleted ticket TEST-T-001");
   });
 
   it("returns JSON envelope for delete", async () => {
     const dir = await mkdtemp(join(tmpdir(), "ticket-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "Test", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
     );
-    const result = await handleTicketDelete("T-001", false, "json", dir);
+    const result = await handleTicketDelete("TEST-T-001", false, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.deleted).toBe(true);
   });

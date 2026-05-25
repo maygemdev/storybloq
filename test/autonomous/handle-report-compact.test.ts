@@ -62,8 +62,8 @@ function setupProject(dir: string): void {
     phases: [{ id: "p1", label: "P1", name: "Phase 1", description: "Test" }],
     blockers: [],
   }));
-  writeFileSync(join(storyDir, "tickets", "T-001.json"), JSON.stringify({
-    id: "T-001", title: "Test ticket", type: "task", status: "open",
+  writeFileSync(join(storyDir, "tickets", "TEST-T-001.json"), JSON.stringify({
+    id: "TEST-T-001", title: "Test ticket", type: "task", status: "open",
     phase: "p1", order: 10, description: "", createdDate: "2026-04-10",
     blockedBy: [], parentTicket: null,
   }));
@@ -78,7 +78,7 @@ function createCompactSession(dir: string, overrides: Partial<FullSessionState> 
   const working = writeSessionSync(sessDir, {
     ...session,
     state: overrides.preCompactState ?? "PLAN",
-    ticket: overrides.ticket ?? { id: "T-001", title: "Test ticket", risk: "low", claimed: true },
+    ticket: overrides.ticket ?? { id: "TEST-T-001", title: "Test ticket", risk: "low", claimed: true },
     git: { branch: "main", mergeBase: "abc123", expectedHead: "abc123", initHead: "abc123" },
     reviews: overrides.reviews ?? { plan: [], code: [] },
   });

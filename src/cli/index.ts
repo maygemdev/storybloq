@@ -63,6 +63,8 @@ async function runCli(): Promise<void> {
     registerRepairCommand,
     registerMigrateCommand,
     registerNodeCommand,
+    registerNamespaceCommand,
+    registerMigrateNamespaceCommand,
   } = await import("./register.js");
 
   // Version injected at build time by tsup define
@@ -128,6 +130,8 @@ async function runCli(): Promise<void> {
   cli = registerHookStatusCommand(cli);
   cli = registerConfigCommand(cli);
   cli = registerNodeCommand(cli);
+  cli = registerNamespaceCommand(cli);
+  cli = registerMigrateNamespaceCommand(cli);
   cli = registerSessionCommand(cli);
 
   function handleUnexpectedError(err: unknown): void {

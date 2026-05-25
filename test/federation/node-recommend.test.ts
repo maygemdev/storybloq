@@ -122,22 +122,22 @@ describe("loadNodeRecommendations", () => {
     const root = await createNodeProject({
       name: "agent",
       tickets: [
-        { id: "T-001", status: "inprogress", crossNodeBlockedBy: ["engine:T-010"] },
+        { id: "TEST-T-001", status: "inprogress", crossNodeBlockedBy: ["engine:TEST-T-010"] },
       ],
     });
 
     const blocked = await loadNodeRecommendations(
       makeState([makeNode({ name: "agent", resolvedPath: root })]),
       5,
-      { "engine:T-010": "open" },
+      { "engine:TEST-T-010": "open" },
     );
-    expect(blocked.recommendationsByNode.get("agent")?.recommendations.find((rec) => rec.id === "T-001")).toBeUndefined();
+    expect(blocked.recommendationsByNode.get("agent")?.recommendations.find((rec) => rec.id === "TEST-T-001")).toBeUndefined();
 
     const unblocked = await loadNodeRecommendations(
       makeState([makeNode({ name: "agent", resolvedPath: root })]),
       5,
-      { "engine:T-010": "complete" },
+      { "engine:TEST-T-010": "complete" },
     );
-    expect(unblocked.recommendationsByNode.get("agent")?.recommendations.find((rec) => rec.id === "T-001")).toBeDefined();
+    expect(unblocked.recommendationsByNode.get("agent")?.recommendations.find((rec) => rec.id === "TEST-T-001")).toBeDefined();
   });
 });

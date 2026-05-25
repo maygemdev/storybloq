@@ -92,18 +92,18 @@ describe("recap command", () => {
 describe("formatRecap", () => {
   it("MD shows suggested actions section", async () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const recap = await buildRecap(state, null, "/tmp");
     const md = formatRecap(recap, state, "md");
     expect(md).toContain("## Suggested Actions");
-    expect(md).toContain("T-001");
+    expect(md).toContain("TEST-T-001");
   });
 
   it("MD shows changes when present", async () => {
     const currentState = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const snapshotInfo = {
@@ -113,7 +113,7 @@ describe("formatRecap", () => {
         project: "test",
         config: minimalConfig,
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
         issues: [],
       },
       filename: "snap.json",
@@ -148,7 +148,7 @@ describe("formatRecap", () => {
   it("MD shows high severity issues in actions", async () => {
     const state = makeState({
       issues: [
-        makeIssue({ id: "ISS-001", severity: "critical", title: "Crash" }),
+        makeIssue({ id: "TEST-ISS-001", severity: "critical", title: "Crash" }),
       ],
     });
     const recap = await buildRecap(state, null, "/tmp");

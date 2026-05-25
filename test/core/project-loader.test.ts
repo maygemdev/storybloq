@@ -50,7 +50,7 @@ const minimalRoadmap = {
 };
 
 const validTicket = {
-  id: "T-001",
+  id: "TEST-T-001",
   title: "Test ticket",
   description: "A test.",
   type: "task",
@@ -63,7 +63,7 @@ const validTicket = {
 };
 
 const validIssue = {
-  id: "ISS-001",
+  id: "TEST-ISS-001",
   title: "Test issue",
   status: "open",
   severity: "medium",
@@ -151,8 +151,8 @@ describe("loadProject", () => {
   describe("happy path", () => {
     it("loads a complete project", async () => {
       testRoot = await createTestProject({
-        tickets: { "T-001.json": validTicket },
-        issues: { "ISS-001.json": validIssue },
+        tickets: { "TEST-T-001.json": validTicket },
+        issues: { "TEST-ISS-001.json": validIssue },
         handovers: { "2026-01-01-initial.md": "# Initial" },
       });
 
@@ -232,8 +232,8 @@ describe("loadProject", () => {
     it("skips corrupt ticket with warning", async () => {
       testRoot = await createTestProject({
         tickets: {
-          "T-001.json": validTicket,
-          "T-002.json": { id: "T-002", title: "Missing fields" }, // invalid
+          "TEST-T-001.json": validTicket,
+          "TEST-T-002.json": { id: "TEST-T-002", title: "Missing fields" }, // invalid
         },
       });
 
@@ -245,7 +245,7 @@ describe("loadProject", () => {
 
     it("skips hidden files", async () => {
       testRoot = await createTestProject({
-        tickets: { "T-001.json": validTicket },
+        tickets: { "TEST-T-001.json": validTicket },
       });
       await writeFile(
         join(testRoot, ".story", "tickets", ".DS_Store"),
@@ -259,7 +259,7 @@ describe("loadProject", () => {
 
     it("skips non-JSON files", async () => {
       testRoot = await createTestProject({
-        tickets: { "T-001.json": validTicket },
+        tickets: { "TEST-T-001.json": validTicket },
       });
       await writeFile(
         join(testRoot, ".story", "tickets", "README.md"),
@@ -281,8 +281,8 @@ describe("loadProject", () => {
     it("throws project_corrupt on integrity warning", async () => {
       testRoot = await createTestProject({
         tickets: {
-          "T-001.json": validTicket,
-          "T-002.json": { id: "T-002", bad: true }, // corrupt
+          "TEST-T-001.json": validTicket,
+          "TEST-T-002.json": { id: "TEST-T-002", bad: true }, // corrupt
         },
       });
 
@@ -362,9 +362,9 @@ describe("loadProject", () => {
       expect(result.state.roadmap.phases).toHaveLength(2);
 
       // Verify derivation
-      expect(result.state.umbrellaIDs.has("T-003")).toBe(true);
+      expect(result.state.umbrellaIDs.has("TEST-T-003")).toBe(true);
       expect(result.state.phaseStatus("alpha")).toBe("inprogress"); // T-001 complete, T-005a open
-      expect(result.state.isBlocked(result.state.ticketByID("T-002")!)).toBe(
+      expect(result.state.isBlocked(result.state.ticketByID("TEST-T-002")!)).toBe(
         false,
       ); // T-001 is complete
     });
@@ -373,7 +373,7 @@ describe("loadProject", () => {
   describe("benchmark", () => {
     it("loads fixture project within reasonable time", async () => {
       testRoot = await createTestProject({
-        tickets: { "T-001.json": validTicket },
+        tickets: { "TEST-T-001.json": validTicket },
       });
       const start = performance.now();
       await loadProject(testRoot);
@@ -391,13 +391,13 @@ describe("write operations", () => {
       testRoot = await createTestProject();
       const ticket = {
         ...validTicket,
-        id: "T-010",
+        id: "TEST-T-010",
       };
 
       await writeTicket(ticket as any, testRoot);
 
       const result = await loadProject(testRoot);
-      const loaded = result.state.ticketByID("T-010");
+      const loaded = result.state.ticketByID("TEST-T-010");
       expect(loaded).toBeDefined();
       expect(loaded!.title).toBe("Test ticket");
       expect(loaded!.status).toBe("open");
@@ -407,7 +407,7 @@ describe("write operations", () => {
       testRoot = await createTestProject();
       const ticket = {
         ...validTicket,
-        id: "T-011",
+        id: "TEST-T-011",
         customField: "preserved",
         extraNumber: 42,
       };
@@ -415,7 +415,7 @@ describe("write operations", () => {
       await writeTicket(ticket as any, testRoot);
 
       const raw = await readFile(
-        join(testRoot, ".story", "tickets", "T-011.json"),
+        join(testRoot, ".story", "tickets", "TEST-T-011.json"),
         "utf-8",
       );
       const parsed = JSON.parse(raw);
@@ -430,7 +430,7 @@ describe("write operations", () => {
       await writeIssue(validIssue as any, testRoot);
 
       const result = await loadProject(testRoot);
-      expect(result.state.issueByID("ISS-001")).toBeDefined();
+      expect(result.state.issueByID("TEST-ISS-001")).toBeDefined();
     });
   });
 
@@ -462,7 +462,7 @@ describe("write operations", () => {
       await writeTicket(validTicket as any, testRoot);
 
       const raw = await readFile(
-        join(testRoot, ".story", "tickets", "T-001.json"),
+        join(testRoot, ".story", "tickets", "TEST-T-001.json"),
         "utf-8",
       );
       expect(raw.endsWith("\n")).toBe(true);
@@ -492,9 +492,9 @@ describe("write operations", () => {
 describe("delete operations", () => {
   it("deletes an existing ticket", async () => {
     testRoot = await createTestProject({
-      tickets: { "T-001.json": validTicket },
+      tickets: { "TEST-T-001.json": validTicket },
     });
-    await deleteTicket("T-001", testRoot);
+    await deleteTicket("TEST-T-001", testRoot);
     const result = await loadProject(testRoot);
     expect(result.state.tickets).toHaveLength(0);
   });
@@ -502,7 +502,7 @@ describe("delete operations", () => {
   it("throws not_found for nonexistent ticket", async () => {
     testRoot = await createTestProject();
     try {
-      await deleteTicket("T-999", testRoot);
+      await deleteTicket("TEST-T-999", testRoot);
       expect.fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(ProjectLoaderError);
@@ -513,18 +513,18 @@ describe("delete operations", () => {
   it("throws conflict when ticket is referenced in blockedBy", async () => {
     testRoot = await createTestProject({
       tickets: {
-        "T-001.json": validTicket,
-        "T-002.json": {
+        "TEST-T-001.json": validTicket,
+        "TEST-T-002.json": {
           ...validTicket,
-          id: "T-002",
+          id: "TEST-T-002",
           title: "Blocked",
-          blockedBy: ["T-001"],
+          blockedBy: ["TEST-T-001"],
         },
       },
     });
 
     try {
-      await deleteTicket("T-001", testRoot);
+      await deleteTicket("TEST-T-001", testRoot);
       expect.fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(ProjectLoaderError);
@@ -536,18 +536,18 @@ describe("delete operations", () => {
   it("throws conflict when ticket has children", async () => {
     testRoot = await createTestProject({
       tickets: {
-        "T-001.json": validTicket,
-        "T-002.json": {
+        "TEST-T-001.json": validTicket,
+        "TEST-T-002.json": {
           ...validTicket,
-          id: "T-002",
+          id: "TEST-T-002",
           title: "Child",
-          parentTicket: "T-001",
+          parentTicket: "TEST-T-001",
         },
       },
     });
 
     try {
-      await deleteTicket("T-001", testRoot);
+      await deleteTicket("TEST-T-001", testRoot);
       expect.fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(ProjectLoaderError);
@@ -558,14 +558,14 @@ describe("delete operations", () => {
 
   it("throws conflict when ticket is referenced by issues", async () => {
     testRoot = await createTestProject({
-      tickets: { "T-001.json": validTicket },
+      tickets: { "TEST-T-001.json": validTicket },
       issues: {
-        "ISS-001.json": { ...validIssue, relatedTickets: ["T-001"] },
+        "TEST-ISS-001.json": { ...validIssue, relatedTickets: ["TEST-T-001"] },
       },
     });
 
     try {
-      await deleteTicket("T-001", testRoot);
+      await deleteTicket("TEST-T-001", testRoot);
       expect.fail("Should have thrown");
     } catch (err) {
       expect(err).toBeInstanceOf(ProjectLoaderError);
@@ -576,9 +576,9 @@ describe("delete operations", () => {
 
   it("deletes an existing issue", async () => {
     testRoot = await createTestProject({
-      issues: { "ISS-001.json": validIssue },
+      issues: { "TEST-ISS-001.json": validIssue },
     });
-    await deleteIssue("ISS-001", testRoot);
+    await deleteIssue("TEST-ISS-001", testRoot);
     const result = await loadProject(testRoot);
     expect(result.state.issues).toHaveLength(0);
   });
@@ -658,12 +658,12 @@ describe("guardPath", () => {
       await writeFile(outsideFile, "{}");
 
       // Create a symlink inside tickets/ pointing to the outside file
-      const linkPath = join(ticketsDir, "T-666.json");
+      const linkPath = join(ticketsDir, "TEST-T-666.json");
       await symlink(outsideFile, linkPath);
 
       await expect(
         writeTicket(
-          { ...validTicket, id: "T-666" } as any,
+          { ...validTicket, id: "TEST-T-666" } as any,
           testRoot,
         ),
       ).rejects.toThrow(ProjectLoaderError);
@@ -676,7 +676,7 @@ describe("guardPath", () => {
 describe("transaction recovery", () => {
   it("cleans up stale journal on load", async () => {
     testRoot = await createTestProject({
-      tickets: { "T-001.json": validTicket },
+      tickets: { "TEST-T-001.json": validTicket },
     });
     const wrapDir = join(testRoot, ".story");
 
@@ -684,8 +684,8 @@ describe("transaction recovery", () => {
     const journal = [
       {
         op: "write",
-        target: join(wrapDir, "tickets", "T-002.json"),
-        tempPath: join(wrapDir, "tickets", "T-002.json.12345.tmp"),
+        target: join(wrapDir, "tickets", "TEST-T-002.json"),
+        tempPath: join(wrapDir, "tickets", "TEST-T-002.json.12345.tmp"),
       },
     ];
     await writeFile(
@@ -701,14 +701,14 @@ describe("transaction recovery", () => {
 
   it("completes forward when temp file exists", async () => {
     testRoot = await createTestProject({
-      tickets: { "T-001.json": validTicket },
+      tickets: { "TEST-T-001.json": validTicket },
     });
     const wrapDir = join(testRoot, ".story");
-    const targetPath = join(wrapDir, "tickets", "T-002.json");
+    const targetPath = join(wrapDir, "tickets", "TEST-T-002.json");
     const tempPath = `${targetPath}.12345.tmp`;
 
     // Write temp file and journal
-    const newTicket = { ...validTicket, id: "T-002", title: "Recovered" };
+    const newTicket = { ...validTicket, id: "TEST-T-002", title: "Recovered" };
     await writeFile(tempPath, JSON.stringify(newTicket, null, 2));
     const journal = [{ op: "write", target: targetPath, tempPath }];
     await writeFile(
@@ -719,17 +719,17 @@ describe("transaction recovery", () => {
     // Load should recover — rename temp to target
     const result = await loadProject(testRoot);
     expect(result.state.tickets).toHaveLength(2);
-    expect(result.state.ticketByID("T-002")?.title).toBe("Recovered");
+    expect(result.state.ticketByID("TEST-T-002")?.title).toBe("Recovered");
     expect(existsSync(tempPath)).toBe(false);
     expect(existsSync(join(wrapDir, ".txn.json"))).toBe(false);
   });
 
   it("does NOT delete targets when commitStarted=false (pre-commit crash)", async () => {
     testRoot = await createTestProject({
-      tickets: { "T-001.json": validTicket },
+      tickets: { "TEST-T-001.json": validTicket },
     });
     const wrapDir = join(testRoot, ".story");
-    const targetPath = join(wrapDir, "tickets", "T-001.json");
+    const targetPath = join(wrapDir, "tickets", "TEST-T-001.json");
 
     // Journal with commitStarted=false and a delete entry
     const journal = {
@@ -744,19 +744,19 @@ describe("transaction recovery", () => {
     // Recovery should NOT delete T-001 — commit never started
     const result = await loadProject(testRoot);
     expect(result.state.tickets).toHaveLength(1);
-    expect(result.state.ticketByID("T-001")).toBeDefined();
+    expect(result.state.ticketByID("TEST-T-001")).toBeDefined();
     expect(existsSync(join(wrapDir, ".txn.json"))).toBe(false);
   });
 
   it("replays deletes when commitStarted=true (mid-commit crash)", async () => {
     testRoot = await createTestProject({
       tickets: {
-        "T-001.json": validTicket,
-        "T-002.json": { ...validTicket, id: "T-002", title: "To Delete" },
+        "TEST-T-001.json": validTicket,
+        "TEST-T-002.json": { ...validTicket, id: "TEST-T-002", title: "To Delete" },
       },
     });
     const wrapDir = join(testRoot, ".story");
-    const deleteTarget = join(wrapDir, "tickets", "T-002.json");
+    const deleteTarget = join(wrapDir, "tickets", "TEST-T-002.json");
 
     // Journal with commitStarted=true and a delete entry
     const journal = {
@@ -771,17 +771,17 @@ describe("transaction recovery", () => {
     // Recovery should complete the delete
     const result = await loadProject(testRoot);
     expect(result.state.tickets).toHaveLength(1);
-    expect(result.state.ticketByID("T-002")).toBeUndefined();
+    expect(result.state.ticketByID("TEST-T-002")).toBeUndefined();
     expect(existsSync(deleteTarget)).toBe(false);
     expect(existsSync(join(wrapDir, ".txn.json"))).toBe(false);
   });
 
   it("cleans up temps when commitStarted=false", async () => {
     testRoot = await createTestProject({
-      tickets: { "T-001.json": validTicket },
+      tickets: { "TEST-T-001.json": validTicket },
     });
     const wrapDir = join(testRoot, ".story");
-    const targetPath = join(wrapDir, "tickets", "T-002.json");
+    const targetPath = join(wrapDir, "tickets", "TEST-T-002.json");
     const tempPath = `${targetPath}.99999.tmp`;
 
     // Write orphan temp and journal with commitStarted=false
@@ -808,17 +808,17 @@ describe("deterministic load order", () => {
     // Create tickets with different filenames to verify deterministic ordering
     testRoot = await createTestProject({
       tickets: {
-        "T-003.json": { ...validTicket, id: "T-003", title: "Third" },
-        "T-001.json": { ...validTicket, id: "T-001", title: "First" },
-        "T-002.json": { ...validTicket, id: "T-002", title: "Second" },
+        "TEST-T-003.json": { ...validTicket, id: "TEST-T-003", title: "Third" },
+        "TEST-T-001.json": { ...validTicket, id: "TEST-T-001", title: "First" },
+        "TEST-T-002.json": { ...validTicket, id: "TEST-T-002", title: "Second" },
       },
     });
 
     const result = await loadProject(testRoot);
     // Tickets should be loaded in filename-sorted order (T-001, T-002, T-003)
     // This ensures first-wins collision is deterministic
-    expect(result.state.tickets[0]!.id).toBe("T-001");
-    expect(result.state.tickets[1]!.id).toBe("T-002");
-    expect(result.state.tickets[2]!.id).toBe("T-003");
+    expect(result.state.tickets[0]!.id).toBe("TEST-T-001");
+    expect(result.state.tickets[1]!.id).toBe("TEST-T-002");
+    expect(result.state.tickets[2]!.id).toBe("TEST-T-003");
   });
 });

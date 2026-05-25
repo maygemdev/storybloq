@@ -5,7 +5,7 @@
 import { describe, it, expect } from "vitest";
 import { checkVersionMismatch } from "../../src/autonomous/version-check.js";
 
-describe("ISS-076: version mismatch advisory", () => {
+describe("TEST-ISS-076: version mismatch advisory", () => {
   it("returns null when versions match", () => {
     const result = checkVersionMismatch("0.1.41", "0.1.41");
     expect(result).toBeNull();

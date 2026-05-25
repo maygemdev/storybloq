@@ -22,7 +22,7 @@ import {
 
 function makeArtifact(overrides?: Partial<ReviewVerdictArtifact>): ReviewVerdictArtifact {
   return {
-    target: "T-250",
+    target: "TEST-T-250",
     stage: "code",
     round: 1,
     reviewer: "codex",
@@ -62,19 +62,19 @@ describe("ReviewVerdict (T-263)", () => {
 
   describe("verdictFilename", () => {
     it("produces correct format for ticket target", () => {
-      expect(verdictFilename("T-250", "code", 1)).toBe("T-250-code-r1.json");
+      expect(verdictFilename("TEST-T-250", "code", 1)).toBe("TEST-T-250-code-r1.json");
     });
 
     it("produces correct format for issue target", () => {
-      expect(verdictFilename("ISS-378", "plan", 2)).toBe("ISS-378-plan-r2.json");
+      expect(verdictFilename("TEST-ISS-378", "plan", 2)).toBe("TEST-ISS-378-plan-r2.json");
     });
 
     it("lowercases stage name", () => {
-      expect(verdictFilename("T-100", "CODE", 3)).toBe("T-100-code-r3.json");
+      expect(verdictFilename("TEST-T-100", "CODE", 3)).toBe("TEST-T-100-code-r3.json");
     });
 
     it("sanitizes slash in target", () => {
-      expect(verdictFilename("T/250", "code", 1)).toBe("T-250-code-r1.json");
+      expect(verdictFilename("TEST-T/250", "code", 1)).toBe("TEST-T-250-code-r1.json");
     });
   });
 
@@ -151,10 +151,10 @@ describe("ReviewVerdict (T-263)", () => {
     it("writes file with correct content", () => {
       const artifact = makeArtifact();
       writeReviewVerdict(sessionDir, artifact);
-      const filePath = join(sessionDir, "telemetry", "reviews", "T-250-code-r1.json");
+      const filePath = join(sessionDir, "telemetry", "reviews", "TEST-T-250-code-r1.json");
       expect(existsSync(filePath)).toBe(true);
       const parsed = JSON.parse(readFileSync(filePath, "utf-8"));
-      expect(parsed.target).toBe("T-250");
+      expect(parsed.target).toBe("TEST-T-250");
       expect(parsed.stage).toBe("code");
       expect(parsed.round).toBe(1);
       expect(parsed.reviewer).toBe("codex");
@@ -181,7 +181,7 @@ describe("ReviewVerdict (T-263)", () => {
     it("does not overwrite existing file (immutability)", () => {
       const artifact = makeArtifact();
       writeReviewVerdict(sessionDir, artifact);
-      const filePath = join(sessionDir, "telemetry", "reviews", "T-250-code-r1.json");
+      const filePath = join(sessionDir, "telemetry", "reviews", "TEST-T-250-code-r1.json");
       const original = readFileSync(filePath, "utf-8");
 
       const modified = makeArtifact({ verdict: "approve", summary: "Changed" });
@@ -228,7 +228,7 @@ describe("ReviewVerdict (T-263)", () => {
       const hash = (result as { contentHash: string }).contentHash;
       const read = readReviewVerdict(sessionDir, hash);
       expect(read).not.toBeNull();
-      expect(read!.target).toBe("T-250");
+      expect(read!.target).toBe("TEST-T-250");
       expect(read!.stage).toBe("code");
       expect(read!.round).toBe(1);
       expect(read!.verdict).toBe("revise");
@@ -242,7 +242,7 @@ describe("ReviewVerdict (T-263)", () => {
     it("returns null for malformed JSON", () => {
       const reviewsDir = join(sessionDir, "telemetry", "reviews");
       mkdirSync(reviewsDir, { recursive: true });
-      writeFileSync(join(reviewsDir, "T-250-code-r1.json"), "not-valid-json{{{");
+      writeFileSync(join(reviewsDir, "TEST-T-250-code-r1.json"), "not-valid-json{{{");
       const result = readReviewVerdict(sessionDir, "some-hash");
       expect(result).toBeNull();
     });
@@ -314,7 +314,7 @@ describe("ReviewVerdict (T-263)", () => {
 
   describe("multi-target collision", () => {
     it("16 verdicts (4 targets x 2 stages x 2 rounds) produce distinct files", () => {
-      const targets = ["T-100", "T-200", "ISS-010", "ISS-020"];
+      const targets = ["TEST-T-100", "TEST-T-200", "TEST-ISS-010", "TEST-ISS-020"];
       const stages: Array<"plan" | "code"> = ["plan", "code"];
       const rounds = [1, 2];
 
@@ -370,7 +370,7 @@ describe("ReviewVerdict (T-263)", () => {
       // Read and validate with contentHash
       const recovered = readReviewVerdict(sessionDir, contentHash);
       expect(recovered).not.toBeNull();
-      expect(recovered!.target).toBe("T-250");
+      expect(recovered!.target).toBe("TEST-T-250");
       expect(recovered!.verdict).toBe("revise");
 
       // Can build Tier 1 from recovered artifact
@@ -383,7 +383,7 @@ describe("ReviewVerdict (T-263)", () => {
       const artifact = makeArtifact();
       writeReviewVerdict(sessionDir, artifact);
 
-      const filePath = join(sessionDir, "telemetry", "reviews", "T-250-code-r1.json");
+      const filePath = join(sessionDir, "telemetry", "reviews", "TEST-T-250-code-r1.json");
       const parsed = JSON.parse(readFileSync(filePath, "utf-8"));
       parsed._contentHash = "tampered-hash";
       writeFileSync(filePath, JSON.stringify(parsed));
@@ -398,7 +398,7 @@ describe("ReviewVerdict (T-263)", () => {
       const writeResult = writeReviewVerdict(sessionDir, artifact);
       const hash = (writeResult as { contentHash: string }).contentHash;
 
-      const filePath = join(sessionDir, "telemetry", "reviews", "T-250-code-r1.json");
+      const filePath = join(sessionDir, "telemetry", "reviews", "TEST-T-250-code-r1.json");
       const parsed = JSON.parse(readFileSync(filePath, "utf-8"));
       parsed.verdict = "approve";
       writeFileSync(filePath, JSON.stringify(parsed));

@@ -51,7 +51,7 @@ export class CrossNodeBlockingResolver {
       }
 
       const reads = Array.from(itemIds).map(async (itemId) => {
-        const isTicket = itemId.startsWith("T-");
+        const isTicket = !itemId.includes("-ISS-");
         const dir = join(node.storyDir, isTicket ? "tickets" : "issues");
         try {
           const raw = await readFile(join(dir, `${itemId}.json`), "utf-8");

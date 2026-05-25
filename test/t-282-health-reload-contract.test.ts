@@ -14,7 +14,7 @@ import { resolve } from "node:path";
  * the runtime contract. This file just gives the autonomous guide a npm-visible
  * red-phase signal.
  */
-describe("T-282 health reload contract", () => {
+describe("TEST-T-282 health reload contract", () => {
   const repoRoot = resolve(__dirname, "../..");
   const fileWatcherPath = resolve(repoRoot, "macos/claudestory/Core/FileWatcher.swift");
   const vmPath = resolve(repoRoot, "macos/claudestory/ViewModels/ProjectViewModel.swift");

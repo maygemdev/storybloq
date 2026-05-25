@@ -413,7 +413,7 @@ function sortByPhaseAndOrder(
 
 // --- ISS-018: Handover context boost ---
 
-const TICKET_ID_RE = /\bT-\d{3}[a-z]?\b/g;
+const TICKET_ID_RE = /\b[A-Z0-9]{3,12}-T-\d{3}[a-z]?\b/g;
 const ACTIONABLE_HEADING_RE = /^#+\s.*(next|open|remaining|todo|blocked)/im;
 const HANDOVER_BOOST = 50;
 const HANDOVER_BASE_SCORE = 350;

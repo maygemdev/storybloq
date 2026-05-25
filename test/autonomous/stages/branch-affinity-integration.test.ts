@@ -104,42 +104,42 @@ describe("mismatch blocking in PickTicketStage.report()", () => {
   it("routes to HANDOVER when pick does not match branch entity", async () => {
     setupProject(testRoot, {
       tickets: [
-        { id: "T-100", title: "Branch ticket", status: "open", phase: "p1" },
-        { id: "T-200", title: "Other ticket", status: "open", phase: "p1" },
+        { id: "TEST-T-100", title: "Branch ticket", status: "open", phase: "p1" },
+        { id: "TEST-T-200", title: "Other ticket", status: "open", phase: "p1" },
       ],
     });
     const state = makeSessionState({
-      git: { branch: "story/T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
+      git: { branch: "story/TEST-T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new PickTicketStage();
 
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-200" } as any);
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-200" } as any);
 
     expect(result).toHaveProperty("action", "goto");
     expect(result).toHaveProperty("target", "HANDOVER");
-    expect((result as any).result.instruction).toContain("T-100");
-    expect((result as any).result.instruction).toContain("T-200");
+    expect((result as any).result.instruction).toContain("TEST-T-100");
+    expect((result as any).result.instruction).toContain("TEST-T-200");
   });
 
   it("allows pick when it matches branch entity", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-100", title: "Branch ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-100", title: "Branch ticket", status: "open", phase: "p1" }],
     });
     const state = makeSessionState({
-      git: { branch: "story/T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
+      git: { branch: "story/TEST-T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new PickTicketStage();
 
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-100" } as any);
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-100" } as any);
 
     expect(result).toHaveProperty("action", "advance");
   });
 
   it("does not block when on main branch", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-200", title: "Any ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-200", title: "Any ticket", status: "open", phase: "p1" }],
     });
     const state = makeSessionState({
       git: { branch: "main", mergeBase: "abc123", expectedHead: "abc123" },
@@ -147,39 +147,39 @@ describe("mismatch blocking in PickTicketStage.report()", () => {
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new PickTicketStage();
 
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-200" } as any);
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-200" } as any);
 
     expect(result).toHaveProperty("action", "advance");
   });
 
   it("does not block in targeted mode even with mismatched branch", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-200", title: "Target ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-200", title: "Target ticket", status: "open", phase: "p1" }],
     });
     const state = makeSessionState({
-      git: { branch: "story/T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
-      targetWork: ["T-200"],
+      git: { branch: "story/TEST-T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
+      targetWork: ["TEST-T-200"],
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new PickTicketStage();
 
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-200" } as any);
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-200" } as any);
 
     expect(result).toHaveProperty("action", "advance");
   });
 
   it("does not block when branchStrategy is per-ticket", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-200", title: "Other ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-200", title: "Other ticket", status: "open", phase: "p1" }],
     });
     const state = makeSessionState({
-      git: { branch: "story/T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
+      git: { branch: "story/TEST-T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
       resolvedBranchStrategy: "per-ticket",
     } as any);
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe({ branchStrategy: "per-ticket" }));
     const stage = new PickTicketStage();
 
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-200" } as any);
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-200" } as any);
 
     // Should NOT route to HANDOVER (per-ticket skips mismatch blocking)
     expect(result).not.toHaveProperty("target", "HANDOVER");
@@ -187,15 +187,15 @@ describe("mismatch blocking in PickTicketStage.report()", () => {
 
   it("blocks issue pick that does not match branch entity", async () => {
     setupProject(testRoot, {
-      issues: [{ id: "ISS-050", title: "Some issue", status: "open", severity: "high" }],
+      issues: [{ id: "TEST-ISS-050", title: "Some issue", status: "open", severity: "high" }],
     });
     const state = makeSessionState({
-      git: { branch: "story/T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
+      git: { branch: "story/TEST-T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new PickTicketStage();
 
-    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-050" } as any);
+    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-050" } as any);
 
     expect(result).toHaveProperty("action", "goto");
     expect(result).toHaveProperty("target", "HANDOVER");
@@ -209,10 +209,10 @@ describe("mismatch blocking in PickTicketStage.report()", () => {
 describe("annotation in PickTicketStage.enter()", () => {
   it("includes branch affinity annotation when on a feature branch", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-100", title: "Branch ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-100", title: "Branch ticket", status: "open", phase: "p1" }],
     });
     const state = makeSessionState({
-      git: { branch: "story/T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
+      git: { branch: "story/TEST-T-100-branch-ticket", mergeBase: "abc123", expectedHead: "abc123" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new PickTicketStage();
@@ -221,12 +221,12 @@ describe("annotation in PickTicketStage.enter()", () => {
     const instruction = "instruction" in result ? (result as any).instruction : "";
 
     expect(instruction).toContain("[Branch affinity]");
-    expect(instruction).toContain("T-100");
+    expect(instruction).toContain("TEST-T-100");
   });
 
   it("does not include annotation when on main", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-100", title: "Some ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-100", title: "Some ticket", status: "open", phase: "p1" }],
     });
     const state = makeSessionState({
       git: { branch: "main", mergeBase: "abc123", expectedHead: "abc123" },
@@ -242,10 +242,10 @@ describe("annotation in PickTicketStage.enter()", () => {
 
   it("includes ambiguous warning when branch has multiple IDs", async () => {
     setupProject(testRoot, {
-      tickets: [{ id: "T-100", title: "Ticket", status: "open", phase: "p1" }],
+      tickets: [{ id: "TEST-T-100", title: "Ticket", status: "open", phase: "p1" }],
     });
     const state = makeSessionState({
-      git: { branch: "feature/T-100-and-T-200", mergeBase: "abc123", expectedHead: "abc123" },
+      git: { branch: "feature/TEST-T-100-and-TEST-T-200", mergeBase: "abc123", expectedHead: "abc123" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const stage = new PickTicketStage();

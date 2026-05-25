@@ -40,14 +40,14 @@ describe("MCP integration — real filesystem", () => {
 
   it("storybloq_ticket_get — valid ticket", async () => {
     const root = await setupProject();
-    const result = await runMcpReadTool(root, (ctx) => handleTicketGet("T-001", ctx));
+    const result = await runMcpReadTool(root, (ctx) => handleTicketGet("TEST-T-001", ctx));
     expect(result.isError).toBeUndefined();
     expect(result.content[0].text).toBeDefined();
   });
 
   it("storybloq_ticket_get — not found (informational, not isError)", async () => {
     const root = await setupProject();
-    const result = await runMcpReadTool(root, (ctx) => handleTicketGet("T-999", ctx));
+    const result = await runMcpReadTool(root, (ctx) => handleTicketGet("TEST-T-999", ctx));
     // not_found is informational — NOT isError
     expect(result.isError).toBeUndefined();
     expect(result.content[0].text).toContain("not found");

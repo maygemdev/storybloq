@@ -1,5 +1,5 @@
 {
-  "id": "T-004",
+  "id": "TEST-T-004",
   "title": "Add status command",
   "description": "Implement the storybloq status command.",
   "type": "task",
@@ -9,5 +9,5 @@
   "createdDate": "2026-01-04",
   "completedDate": null,
   "blockedBy": [],
-  "parentTicket": "T-003"
+  "parentTicket": "TEST-T-003"
 }

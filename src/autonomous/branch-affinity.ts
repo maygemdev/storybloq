@@ -24,7 +24,7 @@ const PROTECTED_BRANCHES = new Set([
   "main", "master", "develop", "dev", "staging", "production",
 ]);
 
-const ENTITY_ID_REGEX = /(?:^|[/_-])(T-\d+[a-z]?|ISS-\d+)(?=$|[/_-])/gi;
+const ENTITY_ID_REGEX = /(?:^|[/_-])([A-Z0-9]{3,12}-T-\d+[a-z]?|[A-Z0-9]{3,12}-ISS-\d+)(?=$|[/_-])/gi;
 
 // --- Functions ---
 
@@ -44,7 +44,9 @@ export function detectBranchAffinity(branch: string | null): BranchAffinity {
   while ((match = ENTITY_ID_REGEX.exec(branch)) !== null) {
     const raw = match[1]!;
     // Normalize prefix to uppercase (T-, ISS-) but preserve digit+suffix casing
-    const id = raw.replace(/^(t-|iss-)/i, (p) => p.toUpperCase());
+    const id = raw.replace(/^([a-z0-9]{3,12}-)?(t-|iss-)/i, (_, ns, prefix) =>
+      (ns ? ns.toUpperCase() : "") + prefix.toUpperCase(),
+    );
     if (!matches.some(m => m.toUpperCase() === id.toUpperCase())) {
       matches.push(id);
     }

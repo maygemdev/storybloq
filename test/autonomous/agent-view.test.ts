@@ -51,14 +51,14 @@ describe("agent-view module", () => {
 
       const result = spawnBackgroundAgent({
         cwd: "/project",
-        ids: ["T-001"],
-        name: "T-001: Some ticket",
+        ids: ["TEST-T-001"],
+        name: "TEST-T-001: Some ticket",
       });
 
       expect(result.success).toBe(true);
       expect(spawnMod).toHaveBeenCalledWith(
         "claude",
-        ["--bg", "--name", "T-001: Some ticket", "/story auto T-001"],
+        ["--bg", "--name", "TEST-T-001: Some ticket", "/story auto TEST-T-001"],
         { cwd: "/project", detached: true, stdio: "ignore" },
       );
       expect(mockChild.unref).toHaveBeenCalled();
@@ -71,13 +71,13 @@ describe("agent-view module", () => {
 
       spawnBackgroundAgent({
         cwd: "/project",
-        ids: ["T-001"],
+        ids: ["TEST-T-001"],
         model: "opus",
       });
 
       expect(spawnMod).toHaveBeenCalledWith(
         "claude",
-        ["--bg", "--model", "opus", "/story auto T-001"],
+        ["--bg", "--model", "opus", "/story auto TEST-T-001"],
         expect.any(Object),
       );
     });
@@ -89,12 +89,12 @@ describe("agent-view module", () => {
 
       spawnBackgroundAgent({
         cwd: "/project",
-        ids: ["T-001", "ISS-077"],
+        ids: ["TEST-T-001", "TEST-ISS-077"],
       });
 
       expect(spawnMod).toHaveBeenCalledWith(
         "claude",
-        ["--bg", "/story auto T-001 ISS-077"],
+        ["--bg", "/story auto TEST-T-001 TEST-ISS-077"],
         expect.any(Object),
       );
     });
@@ -105,7 +105,7 @@ describe("agent-view module", () => {
 
       const result = spawnBackgroundAgent({
         cwd: "/project",
-        ids: ["T-001"],
+        ids: ["TEST-T-001"],
       });
 
       expect(result.success).toBe(false);
@@ -119,12 +119,12 @@ describe("agent-view module", () => {
 
       spawnBackgroundAgent({
         cwd: "/project",
-        ids: ["T-001"],
+        ids: ["TEST-T-001"],
       });
 
       expect(spawnMod).toHaveBeenCalledWith(
         "claude",
-        ["--bg", "/story auto T-001"],
+        ["--bg", "/story auto TEST-T-001"],
         expect.any(Object),
       );
     });

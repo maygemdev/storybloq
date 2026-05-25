@@ -17,6 +17,7 @@ import { CliValidationError } from "../../../src/cli/helpers.js";
 import { initProject } from "../../../src/core/init.js";
 import { loadProject } from "../../../src/core/project-loader.js";
 import { makeState, makeIssue } from "../../core/test-factories.js";
+import { setTestNamespace } from "../../helpers.js";
 import type { CommandContext } from "../../../src/cli/run.js";
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
@@ -35,42 +36,42 @@ describe("handleIssueList", () => {
     const ctx = makeCtx({
       state: makeState({
         issues: [
-          makeIssue({ id: "ISS-001", title: "Bug A" }),
-          makeIssue({ id: "ISS-002", title: "Bug B" }),
+          makeIssue({ id: "TEST-ISS-001", title: "Bug A" }),
+          makeIssue({ id: "TEST-ISS-002", title: "Bug B" }),
         ],
       }),
     });
     const result = handleIssueList({}, ctx);
-    expect(result.output).toContain("ISS-001");
-    expect(result.output).toContain("ISS-002");
+    expect(result.output).toContain("TEST-ISS-001");
+    expect(result.output).toContain("TEST-ISS-002");
   });
 
   it("filters by status", () => {
     const ctx = makeCtx({
       state: makeState({
         issues: [
-          makeIssue({ id: "ISS-001", status: "open" }),
-          makeIssue({ id: "ISS-002", status: "resolved" }),
+          makeIssue({ id: "TEST-ISS-001", status: "open" }),
+          makeIssue({ id: "TEST-ISS-002", status: "resolved" }),
         ],
       }),
     });
     const result = handleIssueList({ status: "open" }, ctx);
-    expect(result.output).toContain("ISS-001");
-    expect(result.output).not.toContain("ISS-002");
+    expect(result.output).toContain("TEST-ISS-001");
+    expect(result.output).not.toContain("TEST-ISS-002");
   });
 
   it("filters by severity", () => {
     const ctx = makeCtx({
       state: makeState({
         issues: [
-          makeIssue({ id: "ISS-001", severity: "high" }),
-          makeIssue({ id: "ISS-002", severity: "low" }),
+          makeIssue({ id: "TEST-ISS-001", severity: "high" }),
+          makeIssue({ id: "TEST-ISS-002", severity: "low" }),
         ],
       }),
     });
     const result = handleIssueList({ severity: "high" }, ctx);
-    expect(result.output).toContain("ISS-001");
-    expect(result.output).not.toContain("ISS-002");
+    expect(result.output).toContain("TEST-ISS-001");
+    expect(result.output).not.toContain("TEST-ISS-002");
   });
 
   it("throws on invalid status filter", () => {
@@ -87,26 +88,26 @@ describe("handleIssueList", () => {
     const ctx = makeCtx({
       state: makeState({
         issues: [
-          makeIssue({ id: "ISS-001", components: ["ui", "api"] }),
-          makeIssue({ id: "ISS-002", components: ["core"] }),
+          makeIssue({ id: "TEST-ISS-001", components: ["ui", "api"] }),
+          makeIssue({ id: "TEST-ISS-002", components: ["core"] }),
         ],
       }),
     });
     const result = handleIssueList({ component: "ui" }, ctx);
-    expect(result.output).toContain("ISS-001");
-    expect(result.output).not.toContain("ISS-002");
+    expect(result.output).toContain("TEST-ISS-001");
+    expect(result.output).not.toContain("TEST-ISS-002");
   });
 
   it("filters by component no matches", () => {
     const ctx = makeCtx({
       state: makeState({
         issues: [
-          makeIssue({ id: "ISS-001", components: ["ui"] }),
+          makeIssue({ id: "TEST-ISS-001", components: ["ui"] }),
         ],
       }),
     });
     const result = handleIssueList({ component: "nonexistent" }, ctx);
-    expect(result.output).not.toContain("ISS-001");
+    expect(result.output).not.toContain("TEST-ISS-001");
   });
 
   it("returns empty message when no issues", () => {
@@ -126,18 +127,18 @@ describe("handleIssueGet", () => {
   it("returns issue when found", () => {
     const ctx = makeCtx({
       state: makeState({
-        issues: [makeIssue({ id: "ISS-001", title: "My Bug" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", title: "My Bug" })],
       }),
     });
-    const result = handleIssueGet("ISS-001", ctx);
-    expect(result.output).toContain("ISS-001");
+    const result = handleIssueGet("TEST-ISS-001", ctx);
+    expect(result.output).toContain("TEST-ISS-001");
     expect(result.output).toContain("My Bug");
     expect(result.exitCode).toBeUndefined();
   });
 
   it("returns not_found when missing", () => {
     const ctx = makeCtx();
-    const result = handleIssueGet("ISS-999", ctx);
+    const result = handleIssueGet("TEST-ISS-999", ctx);
     expect(result.output).toContain("not_found");
     expect(result.exitCode).toBe(ExitCode.USER_ERROR);
   });
@@ -156,12 +157,13 @@ describe("handleIssueCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleIssueCreate(
       { title: "New Bug", severity: "high", impact: "broken", components: [], relatedTickets: [], location: [] },
       "md", dir,
     );
-    expect(result.output).toContain("Created issue ISS-001");
-    const raw = await readFile(join(dir, ".story", "issues", "ISS-001.json"), "utf-8");
+    expect(result.output).toContain("Created issue TEST-ISS-001");
+    const raw = await readFile(join(dir, ".story", "issues", "TEST-ISS-001.json"), "utf-8");
     const issue = JSON.parse(raw);
     expect(issue.title).toBe("New Bug");
     expect(issue.status).toBe("open");
@@ -171,6 +173,7 @@ describe("handleIssueCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleIssueCreate(
       { title: "First", severity: "high", impact: "x", components: [], relatedTickets: [], location: [] },
       "md", dir,
@@ -179,26 +182,28 @@ describe("handleIssueCreate", () => {
       { title: "Second", severity: "low", impact: "y", components: [], relatedTickets: [], location: [] },
       "md", dir,
     );
-    expect(result.output).toContain("ISS-002");
+    expect(result.output).toContain("TEST-ISS-002");
   });
 
   it("returns valid JSON", async () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleIssueCreate(
       { title: "Test", severity: "medium", impact: "x", components: [], relatedTickets: [], location: [] },
       "json", dir,
     );
     const parsed = JSON.parse(result.output);
     expect(parsed.version).toBe(1);
-    expect(parsed.data.id).toBe("ISS-001");
+    expect(parsed.data.id).toBe("TEST-ISS-001");
   });
 
   it("rejects invalid severity", async () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handleIssueCreate(
         { title: "Test", severity: "invalid", impact: "x", components: [], relatedTickets: [], location: [] },
@@ -211,6 +216,7 @@ describe("handleIssueCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleIssueCreate(
       { title: "Test", severity: "high", impact: "x", components: [], relatedTickets: [], location: [] },
       "json", dir,
@@ -223,6 +229,7 @@ describe("handleIssueCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleIssueCreate(
       { title: "Test", severity: "high", impact: "x", components: [], relatedTickets: [], location: [] },
       "json", dir,
@@ -235,6 +242,7 @@ describe("handleIssueCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleIssueCreate(
       { title: "Phased", severity: "high", impact: "x", components: [], relatedTickets: [], location: [], phase: "p0" },
       "json", dir,
@@ -247,6 +255,7 @@ describe("handleIssueCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handleIssueCreate(
         { title: "Bad phase", severity: "high", impact: "x", components: [], relatedTickets: [], location: [], phase: "nonexistent" },
@@ -265,6 +274,7 @@ describe("handleIssueUpdate", () => {
 
   async function setupIssue(dir: string) {
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleIssueCreate(
       { title: "Original Bug", severity: "high", impact: "broken", components: ["core"], relatedTickets: [], location: [] },
       "md", dir,
@@ -275,7 +285,7 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    const result = await handleIssueUpdate("ISS-001", { severity: "low" }, "json", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { severity: "low" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.severity).toBe("low");
   });
@@ -284,7 +294,7 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    const result = await handleIssueUpdate("ISS-001", { status: "resolved", resolution: "fixed" }, "json", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { status: "resolved", resolution: "fixed" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.resolvedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
@@ -293,8 +303,8 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    await handleIssueUpdate("ISS-001", { status: "resolved", resolution: "fixed" }, "md", dir);
-    const result = await handleIssueUpdate("ISS-001", { status: "open" }, "json", dir);
+    await handleIssueUpdate("TEST-ISS-001", { status: "resolved", resolution: "fixed" }, "md", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { status: "open" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.resolvedDate).toBeNull();
   });
@@ -303,8 +313,8 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    await handleIssueUpdate("ISS-001", { status: "resolved", resolution: "fixed" }, "md", dir);
-    const result = await handleIssueUpdate("ISS-001", { title: "Renamed" }, "json", dir);
+    await handleIssueUpdate("TEST-ISS-001", { status: "resolved", resolution: "fixed" }, "md", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { title: "Renamed" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.resolvedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
@@ -313,8 +323,9 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
-      handleIssueUpdate("ISS-999", { title: "X" }, "md", dir),
+      handleIssueUpdate("TEST-ISS-999", { title: "X" }, "md", dir),
     ).rejects.toThrow("not found");
   });
 
@@ -322,7 +333,7 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    const result = await handleIssueUpdate("ISS-001", { components: ["ui", "api"] }, "json", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { components: ["ui", "api"] }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.components).toEqual(["ui", "api"]);
   });
@@ -331,7 +342,7 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    const result = await handleIssueUpdate("ISS-001", { order: 42 }, "json", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { order: 42 }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.order).toBe(42);
   });
@@ -340,7 +351,7 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    const result = await handleIssueUpdate("ISS-001", { phase: "p0" }, "json", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { phase: "p0" }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.phase).toBe("p0");
   });
@@ -349,8 +360,8 @@ describe("handleIssueUpdate", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-update-"));
     tmpDirs.push(dir);
     await setupIssue(dir);
-    await handleIssueUpdate("ISS-001", { phase: "p0" }, "md", dir);
-    const result = await handleIssueUpdate("ISS-001", { phase: null }, "json", dir);
+    await handleIssueUpdate("TEST-ISS-001", { phase: "p0" }, "md", dir);
+    const result = await handleIssueUpdate("TEST-ISS-001", { phase: null }, "json", dir);
     const parsed = JSON.parse(result.output);
     expect(parsed.data.phase).toBeNull();
   });
@@ -360,7 +371,7 @@ describe("handleIssueUpdate", () => {
     tmpDirs.push(dir);
     await setupIssue(dir);
     await expect(
-      handleIssueUpdate("ISS-001", { phase: "nonexistent" }, "md", dir),
+      handleIssueUpdate("TEST-ISS-001", { phase: "nonexistent" }, "md", dir),
     ).rejects.toThrow("not found in roadmap");
   });
 });
@@ -374,6 +385,7 @@ describe("handleIssueMeta", () => {
 
   async function setupIssue(dir: string) {
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleIssueCreate(
       { title: "Original Bug", severity: "high", impact: "broken", components: ["core"], relatedTickets: [], location: [] },
       "md", dir,
@@ -396,10 +408,10 @@ describe("handleIssueMeta", () => {
     tmpDirs.push(dir);
     await setupIssue(dir);
 
-    const setResult = await handleIssueMetaSet("ISS-001", "source", "customer-report", "json", dir);
+    const setResult = await handleIssueMetaSet("TEST-ISS-001", "source", "customer-report", "json", dir);
     expect(JSON.parse(setResult.output).data.source).toBe("customer-report");
 
-    const getResult = handleIssueMetaGet("ISS-001", "source", await loadCtx(dir));
+    const getResult = handleIssueMetaGet("TEST-ISS-001", "source", await loadCtx(dir));
     expect(JSON.parse(getResult.output).data).toBe("customer-report");
   });
 
@@ -408,8 +420,8 @@ describe("handleIssueMeta", () => {
     tmpDirs.push(dir);
     await setupIssue(dir);
 
-    await handleIssueMetaSet("ISS-001", "integrations.external.id", "BUG-123", "json", dir);
-    const getResult = handleIssueMetaGet("ISS-001", "integrations", await loadCtx(dir));
+    await handleIssueMetaSet("TEST-ISS-001", "integrations.external.id", "BUG-123", "json", dir);
+    const getResult = handleIssueMetaGet("TEST-ISS-001", "integrations", await loadCtx(dir));
     expect(JSON.parse(getResult.output).data).toEqual({ external: { id: "BUG-123" } });
   });
 
@@ -418,8 +430,8 @@ describe("handleIssueMeta", () => {
     tmpDirs.push(dir);
     await setupIssue(dir);
 
-    await handleIssueMetaSet("ISS-001", "source", "customer-report", "json", dir);
-    const unsetResult = await handleIssueMetaUnset("ISS-001", "source", "json", dir);
+    await handleIssueMetaSet("TEST-ISS-001", "source", "customer-report", "json", dir);
+    const unsetResult = await handleIssueMetaUnset("TEST-ISS-001", "source", "json", dir);
     expect(JSON.parse(unsetResult.output).data.source).toBeUndefined();
   });
 
@@ -429,7 +441,7 @@ describe("handleIssueMeta", () => {
     await setupIssue(dir);
 
     await expect(
-      handleIssueMetaSet("ISS-001", "severity", "low", "json", dir),
+      handleIssueMetaSet("TEST-ISS-001", "severity", "low", "json", dir),
     ).rejects.toThrow(CliValidationError);
   });
 });
@@ -445,11 +457,12 @@ describe("handleIssueDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "issue-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleIssueCreate(
       { title: "Doomed", severity: "low", impact: "minor", components: [], relatedTickets: [], location: [] },
       "md", dir,
     );
-    const result = await handleIssueDelete("ISS-001", "md", dir);
-    expect(result.output).toContain("Deleted issue ISS-001");
+    const result = await handleIssueDelete("TEST-ISS-001", "md", dir);
+    expect(result.output).toContain("Deleted issue TEST-ISS-001");
   });
 });

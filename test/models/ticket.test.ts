@@ -6,11 +6,11 @@ import { TicketSchema } from "../../src/models/ticket.js";
 describe("TicketSchema", () => {
   describe("valid tickets", () => {
     it("parses a complete ticket with all fields", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/T-001.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/TEST-T-001.json"));
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.id).toBe("T-001");
+        expect(result.data.id).toBe("TEST-T-001");
         expect(result.data.status).toBe("complete");
         expect(result.data.completedDate).toBe("2026-01-02");
         expect(result.data.parentTicket).toBeNull();
@@ -18,7 +18,7 @@ describe("TicketSchema", () => {
     });
 
     it("parses a ticket with optional fields absent", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/T-002.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/TEST-T-002.json"));
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -28,16 +28,16 @@ describe("TicketSchema", () => {
     });
 
     it("parses a suffixed ticket ID (T-005a)", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/T-005a.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/TEST-T-005a.json"));
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.id).toBe("T-005a");
+        expect(result.data.id).toBe("TEST-T-005a");
       }
     });
 
     it("parses a chore ticket type", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/T-005a.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/TEST-T-005a.json"));
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -46,16 +46,16 @@ describe("TicketSchema", () => {
     });
 
     it("parses a ticket with parentTicket set", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/T-004.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/tickets/TEST-T-004.json"));
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.parentTicket).toBe("T-003");
+        expect(result.data.parentTicket).toBe("TEST-T-003");
       }
     });
 
     it("parses all valid fixture tickets", () => {
-      const ticketFiles = ["T-001.json", "T-002.json", "T-003.json", "T-004.json", "T-005a.json"];
+      const ticketFiles = ["TEST-T-001.json", "TEST-T-002.json", "TEST-T-003.json", "TEST-T-004.json", "TEST-T-005a.json"];
       for (const file of ticketFiles) {
         const data = readJson(resolve(fixturesDir, `valid/basic/tickets/${file}`));
         const result = TicketSchema.safeParse(data);
@@ -119,17 +119,17 @@ describe("TicketSchema", () => {
 
   describe("crossNodeBlockedBy (T-337)", () => {
     const validTicket = {
-      id: "T-100", title: "Test", description: "", type: "task",
+      id: "TEST-T-100", title: "Test", description: "", type: "task",
       status: "open", phase: null, order: 10, createdDate: "2026-01-01",
       completedDate: null, blockedBy: [],
     };
 
     it("accepts ticket with crossNodeBlockedBy field", () => {
-      const data = { ...validTicket, crossNodeBlockedBy: ["engine:T-061", "cloud:ISS-005"] };
+      const data = { ...validTicket, crossNodeBlockedBy: ["engine:TEST-T-061", "cloud:TEST-ISS-005"] };
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.crossNodeBlockedBy).toEqual(["engine:T-061", "cloud:ISS-005"]);
+        expect(result.data.crossNodeBlockedBy).toEqual(["engine:TEST-T-061", "cloud:TEST-ISS-005"]);
       }
     });
 
@@ -142,25 +142,25 @@ describe("TicketSchema", () => {
     });
 
     it("rejects invalid cross-node ref format (missing node prefix)", () => {
-      const data = { ...validTicket, crossNodeBlockedBy: ["T-061"] };
+      const data = { ...validTicket, crossNodeBlockedBy: ["TEST-T-061"] };
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(false);
     });
 
     it("rejects uppercase node name in ref", () => {
-      const data = { ...validTicket, crossNodeBlockedBy: ["Engine:T-061"] };
+      const data = { ...validTicket, crossNodeBlockedBy: ["Engine:TEST-T-061"] };
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(false);
     });
 
     it("accepts suffixed ticket ID in ref", () => {
-      const data = { ...validTicket, crossNodeBlockedBy: ["engine:T-012a"] };
+      const data = { ...validTicket, crossNodeBlockedBy: ["engine:TEST-T-012a"] };
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
     });
 
     it("accepts issue ID in ref", () => {
-      const data = { ...validTicket, crossNodeBlockedBy: ["cloud:ISS-042"] };
+      const data = { ...validTicket, crossNodeBlockedBy: ["cloud:TEST-ISS-042"] };
       const result = TicketSchema.safeParse(data);
       expect(result.success).toBe(true);
     });

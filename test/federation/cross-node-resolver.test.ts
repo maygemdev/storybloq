@@ -118,15 +118,15 @@ afterEach(async () => {
 describe("CrossNodeBlockingResolver", () => {
   describe("build + isCrossNodeBlocked", () => {
     it("returns false for ticket with no crossNodeBlockedBy", async () => {
-      const ticket = makeTicketNoCrossRef("T-001");
+      const ticket = makeTicketNoCrossRef("TEST-T-001");
       const resolvedNodes = new Map<string, ResolvedNode>();
       const resolver = await CrossNodeBlockingResolver.build([ticket], resolvedNodes);
       expect(resolver.isCrossNodeBlocked(ticket)).toBe(false);
     });
 
     it("returns false when cross-node ref points to complete remote ticket", async () => {
-      const nodeDir = await createNodeWithTickets("engine", [{ id: "T-061", status: "complete" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061"]);
+      const nodeDir = await createNodeWithTickets("engine", [{ id: "TEST-T-061", status: "complete" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
@@ -135,8 +135,8 @@ describe("CrossNodeBlockingResolver", () => {
     });
 
     it("returns true when cross-node ref points to open remote ticket", async () => {
-      const nodeDir = await createNodeWithTickets("engine", [{ id: "T-061", status: "open" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061"]);
+      const nodeDir = await createNodeWithTickets("engine", [{ id: "TEST-T-061", status: "open" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
@@ -145,7 +145,7 @@ describe("CrossNodeBlockingResolver", () => {
     });
 
     it("returns 'unresolved' when node is inaccessible", async () => {
-      const ticket = makeTicketWithCrossRef("T-001", ["broken:T-001"]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["broken:TEST-T-001"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["broken", { resolved: false, reason: "path does not exist", rawPath: "/missing" }],
       ]);
@@ -155,10 +155,10 @@ describe("CrossNodeBlockingResolver", () => {
 
     it("returns true when any cross-node ref is blocking (mixed refs)", async () => {
       const nodeDir = await createNodeWithTickets("engine", [
-        { id: "T-061", status: "complete" },
-        { id: "T-062", status: "open" },
+        { id: "TEST-T-061", status: "complete" },
+        { id: "TEST-T-062", status: "open" },
       ]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061", "engine:T-062"]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061", "engine:TEST-T-062"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
@@ -169,13 +169,13 @@ describe("CrossNodeBlockingResolver", () => {
 
   describe("getCrossNodeStatus", () => {
     it("returns status for a valid ref", async () => {
-      const nodeDir = await createNodeWithTickets("engine", [{ id: "T-061", status: "complete" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061"]);
+      const nodeDir = await createNodeWithTickets("engine", [{ id: "TEST-T-061", status: "complete" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
       const resolver = await CrossNodeBlockingResolver.build([ticket], resolvedNodes);
-      const status = resolver.getCrossNodeStatus("engine:T-061");
+      const status = resolver.getCrossNodeStatus("engine:TEST-T-061");
       expect(status).toBeDefined();
       if (status?.resolved) {
         expect(status.status).toBe("complete");
@@ -184,14 +184,14 @@ describe("CrossNodeBlockingResolver", () => {
 
     it("returns undefined for unknown ref", async () => {
       const resolver = await CrossNodeBlockingResolver.build([], new Map());
-      expect(resolver.getCrossNodeStatus("engine:T-999")).toBeUndefined();
+      expect(resolver.getCrossNodeStatus("engine:TEST-T-999")).toBeUndefined();
     });
   });
 
   describe("unindexed ref safety", () => {
     it("treats refs not in statuses as unresolved", async () => {
       const resolver = await CrossNodeBlockingResolver.build([], new Map());
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061"]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061"]);
       expect(resolver.isCrossNodeBlocked(ticket)).toBe("unresolved");
     });
   });
@@ -202,9 +202,9 @@ describe("CrossNodeBlockingResolver", () => {
       const nodeDir = await createNodeWithItems(
         "engine",
         [],
-        [{ id: "ISS-001", status: "open" }],
+        [{ id: "TEST-ISS-001", status: "open" }],
       );
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:ISS-001"]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-ISS-001"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
@@ -216,9 +216,9 @@ describe("CrossNodeBlockingResolver", () => {
       const nodeDir = await createNodeWithItems(
         "engine",
         [],
-        [{ id: "ISS-001", status: "resolved" }],
+        [{ id: "TEST-ISS-001", status: "resolved" }],
       );
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:ISS-001"]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-ISS-001"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
@@ -230,13 +230,13 @@ describe("CrossNodeBlockingResolver", () => {
   // TQ-2: Status normalization
   describe("status normalization", () => {
     it("remote ticket with status 'inprogress' -> getCrossNodeStatus resolved=true status='inprogress', isCrossNodeBlocked=true", async () => {
-      const nodeDir = await createNodeWithTickets("engine", [{ id: "T-061", status: "inprogress" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061"]);
+      const nodeDir = await createNodeWithTickets("engine", [{ id: "TEST-T-061", status: "inprogress" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
       const resolver = await CrossNodeBlockingResolver.build([ticket], resolvedNodes);
-      const status = resolver.getCrossNodeStatus("engine:T-061");
+      const status = resolver.getCrossNodeStatus("engine:TEST-T-061");
       expect(status).toBeDefined();
       expect(status?.resolved).toBe(true);
       if (status?.resolved) {
@@ -246,13 +246,13 @@ describe("CrossNodeBlockingResolver", () => {
     });
 
     it("remote ticket with status 'resolved' -> getCrossNodeStatus resolved=true status='complete', isCrossNodeBlocked=false", async () => {
-      const nodeDir = await createNodeWithTickets("engine", [{ id: "T-061", status: "resolved" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061"]);
+      const nodeDir = await createNodeWithTickets("engine", [{ id: "TEST-T-061", status: "resolved" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
       ]);
       const resolver = await CrossNodeBlockingResolver.build([ticket], resolvedNodes);
-      const status = resolver.getCrossNodeStatus("engine:T-061");
+      const status = resolver.getCrossNodeStatus("engine:TEST-T-061");
       expect(status).toBeDefined();
       expect(status?.resolved).toBe(true);
       if (status?.resolved) {
@@ -268,7 +268,7 @@ describe("CrossNodeBlockingResolver", () => {
       // All five strings are rejected by the regex and never entered into statuses.
       // isCrossNodeBlocked sees refs that are not in statuses, which counts as
       // unresolved rather than blocked - the ticket is not actively blocked.
-      const ticket = makeTicketWithCrossRef("T-001", [
+      const ticket = makeTicketWithCrossRef("TEST-T-001", [
         "Engine:T-001",   // uppercase node name - fails regex
         ":T-001",         // missing node name
         "engine:bad",     // item id not T-xxx or ISS-xxx
@@ -284,8 +284,8 @@ describe("CrossNodeBlockingResolver", () => {
 
   describe("blocked takes precedence over unresolved", () => {
     it("returns true when one ref is blocking and another is unresolved", async () => {
-      const nodeDir = await createNodeWithTickets("engine", [{ id: "T-061", status: "open" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-061", "broken:T-099"]);
+      const nodeDir = await createNodeWithTickets("engine", [{ id: "TEST-T-061", status: "open" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-061", "broken:TEST-T-099"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: nodeDir, storyDir: join(nodeDir, ".story"), rawPath: nodeDir }],
         ["broken", { resolved: false, reason: "path does not exist", rawPath: "/missing" }],
@@ -297,23 +297,23 @@ describe("CrossNodeBlockingResolver", () => {
 
   describe("multi-node fan-out", () => {
     it("resolves refs across two different nodes", async () => {
-      const engineDir = await createNodeWithTickets("engine", [{ id: "T-010", status: "complete" }]);
-      const cloudDir = await createNodeWithTickets("cloud", [{ id: "T-020", status: "open" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-010", "cloud:T-020"]);
+      const engineDir = await createNodeWithTickets("engine", [{ id: "TEST-T-010", status: "complete" }]);
+      const cloudDir = await createNodeWithTickets("cloud", [{ id: "TEST-T-020", status: "open" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-010", "cloud:TEST-T-020"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: engineDir, storyDir: join(engineDir, ".story"), rawPath: engineDir }],
         ["cloud", { resolved: true, absolutePath: cloudDir, storyDir: join(cloudDir, ".story"), rawPath: cloudDir }],
       ]);
       const resolver = await CrossNodeBlockingResolver.build([ticket], resolvedNodes);
       expect(resolver.isCrossNodeBlocked(ticket)).toBe(true);
-      expect(resolver.getCrossNodeStatus("engine:T-010")).toEqual({ resolved: true, status: "complete" });
-      expect(resolver.getCrossNodeStatus("cloud:T-020")).toEqual({ resolved: true, status: "open" });
+      expect(resolver.getCrossNodeStatus("engine:TEST-T-010")).toEqual({ resolved: true, status: "complete" });
+      expect(resolver.getCrossNodeStatus("cloud:TEST-T-020")).toEqual({ resolved: true, status: "open" });
     });
 
     it("returns false when all refs across multiple nodes are complete", async () => {
-      const engineDir = await createNodeWithTickets("engine", [{ id: "T-010", status: "complete" }]);
-      const cloudDir = await createNodeWithTickets("cloud", [{ id: "T-020", status: "complete" }]);
-      const ticket = makeTicketWithCrossRef("T-001", ["engine:T-010", "cloud:T-020"]);
+      const engineDir = await createNodeWithTickets("engine", [{ id: "TEST-T-010", status: "complete" }]);
+      const cloudDir = await createNodeWithTickets("cloud", [{ id: "TEST-T-020", status: "complete" }]);
+      const ticket = makeTicketWithCrossRef("TEST-T-001", ["engine:TEST-T-010", "cloud:TEST-T-020"]);
       const resolvedNodes = new Map<string, ResolvedNode>([
         ["engine", { resolved: true, absolutePath: engineDir, storyDir: join(engineDir, ".story"), rawPath: engineDir }],
         ["cloud", { resolved: true, absolutePath: cloudDir, storyDir: join(cloudDir, ".story"), rawPath: cloudDir }],

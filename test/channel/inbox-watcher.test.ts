@@ -55,7 +55,7 @@ describe("inbox-watcher", () => {
 
   it("processes existing event files on startup", async () => {
     await mkdir(inboxPath, { recursive: true });
-    await writeEvent(inboxPath, "ticket_requested", { ticketId: "T-001" }, "2026-04-05T10:00:00.000Z");
+    await writeEvent(inboxPath, "ticket_requested", { ticketId: "TEST-T-001" }, "2026-04-05T10:00:00.000Z");
 
     const mock = createMockServer();
     await startInboxWatcher(root, mock as any);
@@ -128,8 +128,8 @@ describe("inbox-watcher", () => {
 
   it("processes multiple events in timestamp order", async () => {
     await mkdir(inboxPath, { recursive: true });
-    await writeEvent(inboxPath, "ticket_requested", { ticketId: "T-002" }, "2026-04-05T10:00:02.000Z");
-    await writeEvent(inboxPath, "ticket_requested", { ticketId: "T-001" }, "2026-04-05T10:00:01.000Z");
+    await writeEvent(inboxPath, "ticket_requested", { ticketId: "TEST-T-002" }, "2026-04-05T10:00:02.000Z");
+    await writeEvent(inboxPath, "ticket_requested", { ticketId: "TEST-T-001" }, "2026-04-05T10:00:01.000Z");
 
     const mock = createMockServer();
     await startInboxWatcher(root, mock as any);
@@ -137,7 +137,7 @@ describe("inbox-watcher", () => {
     expect(mock.notifications).toHaveLength(2);
     // First notification should be for T-001 (earlier timestamp)
     const firstContent = (mock.notifications[0].params as any).content as string;
-    expect(firstContent).toContain("T-001");
+    expect(firstContent).toContain("TEST-T-001");
   });
 
   it("drains all files when inbox exceeds max depth", async () => {
@@ -163,7 +163,7 @@ describe("inbox-watcher", () => {
 
   it("retries non-permission events on notification failure", async () => {
     await mkdir(inboxPath, { recursive: true });
-    await writeEvent(inboxPath, "ticket_requested", { ticketId: "T-001" }, new Date().toISOString());
+    await writeEvent(inboxPath, "ticket_requested", { ticketId: "TEST-T-001" }, new Date().toISOString());
 
     // Create a mock that throws on sendNotification
     const mock = {
@@ -185,7 +185,7 @@ describe("inbox-watcher", () => {
     await mkdir(inboxPath, { recursive: true });
     // Event with timestamp >60s ago
     const expired = new Date(Date.now() - 120_000).toISOString();
-    await writeEvent(inboxPath, "ticket_requested", { ticketId: "T-001" }, expired);
+    await writeEvent(inboxPath, "ticket_requested", { ticketId: "TEST-T-001" }, expired);
 
     const mock = {
       server: {
@@ -225,7 +225,7 @@ describe("inbox-watcher", () => {
 
   it("routes regular events to notifications/claude/channel", async () => {
     await mkdir(inboxPath, { recursive: true });
-    await writeEvent(inboxPath, "ticket_requested", { ticketId: "T-001" }, "2026-04-05T10:00:00.000Z");
+    await writeEvent(inboxPath, "ticket_requested", { ticketId: "TEST-T-001" }, "2026-04-05T10:00:00.000Z");
 
     const mock = createMockServer();
     await startInboxWatcher(root, mock as any);
@@ -260,7 +260,7 @@ describe("inbox-watcher", () => {
     const eventData = JSON.stringify({
       event: "ticket_requested",
       timestamp: "2026-04-05T10:00:00.000Z",
-      payload: { ticketId: "T-099" },
+      payload: { ticketId: "TEST-T-099" },
     });
     await writeFile(join(inboxPath, staleFilename), eventData, "utf-8");
 

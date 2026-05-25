@@ -14,10 +14,10 @@ function makeRec(overrides: Partial<Recommendation> & { id: string }): Recommend
 }
 
 const RECS: readonly Recommendation[] = [
-  makeRec({ id: "ISS-601", kind: "issue", title: "Mac app shows 0 tickets", score: 90, reason: "High severity" }),
-  makeRec({ id: "ISS-602", kind: "issue", title: "Silently drops decode failures", score: 85, reason: "High severity" }),
-  makeRec({ id: "T-160", kind: "ticket", title: "Beta channel", score: 60 }),
-  makeRec({ id: "T-161", kind: "ticket", title: "Keyboard shortcuts", score: 40 }),
+  makeRec({ id: "TEST-ISS-601", kind: "issue", title: "Mac app shows 0 tickets", score: 90, reason: "High severity" }),
+  makeRec({ id: "TEST-ISS-602", kind: "issue", title: "Silently drops decode failures", score: 85, reason: "High severity" }),
+  makeRec({ id: "TEST-T-160", kind: "ticket", title: "Beta channel", score: 60 }),
+  makeRec({ id: "TEST-T-161", kind: "ticket", title: "Keyboard shortcuts", score: 40 }),
   makeRec({ id: "DEBT_TREND", kind: "action", title: "Review debt trend", score: 30, category: "debt_trend" }),
 ];
 
@@ -53,9 +53,9 @@ describe("buildDispatchPlan", () => {
     it("includes all non-action recommendations up to maxAgents", () => {
       const plan = buildDispatchPlan(RECS, "all", "/project", "2.1.140", 3);
       expect(plan.entries).toHaveLength(3);
-      expect(plan.entries[0].target.id).toBe("ISS-601");
-      expect(plan.entries[1].target.id).toBe("ISS-602");
-      expect(plan.entries[2].target.id).toBe("T-160");
+      expect(plan.entries[0].target.id).toBe("TEST-ISS-601");
+      expect(plan.entries[1].target.id).toBe("TEST-ISS-602");
+      expect(plan.entries[2].target.id).toBe("TEST-T-160");
     });
 
     it("skips action recommendations", () => {
@@ -72,22 +72,22 @@ describe("buildDispatchPlan", () => {
 
   describe("ids: specific list", () => {
     it("finds matching recommendations", () => {
-      const plan = buildDispatchPlan(RECS, ["ISS-601", "T-160"], "/project", "2.1.140", 5);
+      const plan = buildDispatchPlan(RECS, ["TEST-ISS-601", "TEST-T-160"], "/project", "2.1.140", 5);
       expect(plan.entries).toHaveLength(2);
       expect(plan.entries[0].target.title).toBe("Mac app shows 0 tickets");
       expect(plan.entries[1].target.title).toBe("Beta channel");
     });
 
     it("accepts unknown IDs with valid format", () => {
-      const plan = buildDispatchPlan(RECS, ["T-999"], "/project", "2.1.140", 5);
+      const plan = buildDispatchPlan(RECS, ["TEST-T-999"], "/project", "2.1.140", 5);
       expect(plan.entries).toHaveLength(1);
-      expect(plan.entries[0].target.id).toBe("T-999");
+      expect(plan.entries[0].target.id).toBe("TEST-T-999");
       expect(plan.entries[0].target.kind).toBe("ticket");
       expect(plan.entries[0].target.reason).toBe("explicitly requested");
     });
 
     it("skips invalid ID formats", () => {
-      const plan = buildDispatchPlan(RECS, ["not-valid", "T-001"], "/project", "2.1.140", 5);
+      const plan = buildDispatchPlan(RECS, ["not-valid", "TEST-T-001"], "/project", "2.1.140", 5);
       expect(plan.entries).toHaveLength(1);
       expect(plan.skipped).toContainEqual({ id: "not-valid", reason: "invalid ID format" });
     });
@@ -99,31 +99,31 @@ describe("buildDispatchPlan", () => {
     });
 
     it("normalizes ID case for unknown IDs", () => {
-      const plan = buildDispatchPlan(RECS, ["t-999", "iss-100"], "/project", "2.1.140", 5);
-      expect(plan.entries[0].target.id).toBe("T-999");
-      expect(plan.entries[1].target.id).toBe("ISS-100");
+      const plan = buildDispatchPlan(RECS, ["test-t-999", "test-iss-100"], "/project", "2.1.140", 5);
+      expect(plan.entries[0].target.id).toBe("TEST-T-999");
+      expect(plan.entries[1].target.id).toBe("TEST-ISS-100");
     });
 
     it("normalizes ID case and preserves recommendation metadata", () => {
-      const plan = buildDispatchPlan(RECS, ["t-160"], "/project", "2.1.140", 5);
+      const plan = buildDispatchPlan(RECS, ["test-t-160"], "/project", "2.1.140", 5);
       expect(plan.entries).toHaveLength(1);
-      expect(plan.entries[0].target.id).toBe("T-160");
+      expect(plan.entries[0].target.id).toBe("TEST-T-160");
       expect(plan.entries[0].target.title).toBe("Beta channel");
       expect(plan.entries[0].target.reason).toBe("Next in phase");
     });
 
     it("preserves lowercase suffix on letter-suffixed ticket IDs", () => {
-      const plan = buildDispatchPlan(RECS, ["t-123a"], "/project", "2.1.140", 5);
-      expect(plan.entries[0].target.id).toBe("T-123a");
+      const plan = buildDispatchPlan(RECS, ["test-t-123a"], "/project", "2.1.140", 5);
+      expect(plan.entries[0].target.id).toBe("TEST-T-123a");
     });
 
     it("deduplicates IDs", () => {
-      const plan = buildDispatchPlan(RECS, ["T-160", "T-160", "t-160"], "/project", "2.1.140", 5);
+      const plan = buildDispatchPlan(RECS, ["TEST-T-160", "TEST-T-160", "test-t-160"], "/project", "2.1.140", 5);
       expect(plan.entries).toHaveLength(1);
     });
 
     it("caps at maxAgents", () => {
-      const plan = buildDispatchPlan(RECS, ["T-001", "T-002", "T-003"], "/project", "2.1.140", 2);
+      const plan = buildDispatchPlan(RECS, ["TEST-T-001", "TEST-T-002", "TEST-T-003"], "/project", "2.1.140", 2);
       expect(plan.entries).toHaveLength(2);
     });
   });
@@ -160,8 +160,8 @@ describe("buildDispatchPlan", () => {
     });
 
     it("sets prompt to target ID", () => {
-      const plan = buildDispatchPlan(RECS, ["ISS-601"], "/project", "2.1.140", 5);
-      expect(plan.entries[0].prompt).toBe("ISS-601");
+      const plan = buildDispatchPlan(RECS, ["TEST-ISS-601"], "/project", "2.1.140", 5);
+      expect(plan.entries[0].prompt).toBe("TEST-ISS-601");
     });
   });
 
@@ -180,12 +180,12 @@ describe("buildDispatchPlan", () => {
 
 describe("buildFederationDispatchPlan (T-336)", () => {
   const engineRecs: Recommendation[] = [
-    makeRec({ id: "T-061", title: "replaceAudio", score: 90 }),
-    makeRec({ id: "T-073", title: "changePace", score: 60 }),
+    makeRec({ id: "TEST-T-061", title: "replaceAudio", score: 90 }),
+    makeRec({ id: "TEST-T-073", title: "changePace", score: 60 }),
   ];
 
   const cloudRecs: Recommendation[] = [
-    makeRec({ id: "T-052", kind: "issue", title: "webhook retry", score: 80 }),
+    makeRec({ id: "TEST-T-052", kind: "issue", title: "webhook retry", score: 80 }),
   ];
 
   it("builds plan with entries from multiple nodes", () => {
@@ -235,7 +235,7 @@ describe("buildFederationDispatchPlan (T-336)", () => {
 
   it("filters out action recommendations", () => {
     const recsWithAction: Recommendation[] = [
-      makeRec({ id: "T-061", title: "replaceAudio", score: 90 }),
+      makeRec({ id: "TEST-T-061", title: "replaceAudio", score: 90 }),
       makeRec({ id: "DEBT_TREND", kind: "action", title: "Review debt", score: 30, category: "debt_trend" }),
     ];
     const nodeRecs = new Map([
@@ -255,8 +255,8 @@ describe("buildFederationDispatchPlan (T-336)", () => {
 
   it("does not deduplicate same ID across different nodes", () => {
     const nodeRecs = new Map([
-      ["engine", { root: "/dev/engine", recommendations: [makeRec({ id: "T-001", title: "engine setup", score: 90 })] }],
-      ["cloud", { root: "/dev/cloud", recommendations: [makeRec({ id: "T-001", title: "cloud setup", score: 80 })] }],
+      ["engine", { root: "/dev/engine", recommendations: [makeRec({ id: "TEST-T-001", title: "engine setup", score: 90 })] }],
+      ["cloud", { root: "/dev/cloud", recommendations: [makeRec({ id: "TEST-T-001", title: "cloud setup", score: 80 })] }],
     ]);
     const plan = buildFederationDispatchPlan(nodeRecs, "2.1.140", 5);
     expect(plan.entries).toHaveLength(2);

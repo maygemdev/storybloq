@@ -82,7 +82,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
     startedAt: now,
     guideCallCount: 5,
     config: { maxTicketsPerSession: 5, compactThreshold: "high", reviewBackends: ["codex", "agent"] },
-    ticket: { id: "T-001", title: "Test ticket", claimed: true },
+    ticket: { id: "TEST-T-001", title: "Test ticket", claimed: true },
     filedDeferrals: [],
     pendingDeferrals: [],
     deferralsUnfiled: false,
@@ -101,7 +101,7 @@ function makeRecipe(): ResolvedRecipe {
   };
 }
 
-describe("ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
+describe("TEST-ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
   let testRoot: string;
   let sessionDir: string;
   const stage = new FinalizeStage();
@@ -181,7 +181,7 @@ describe("ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
     const advance = await stage.report(ctx, { completedAction: "commit_done", commitHash: "aaaaaaa" });
 
     expect(advance.action).toBe("advance");
-    expect(mockedGitRevListAncestryPath).toHaveBeenCalledWith(testRoot, B40, E40, ".story/tickets/T-001.json");
+    expect(mockedGitRevListAncestryPath).toHaveBeenCalledWith(testRoot, B40, E40, ".story/tickets/TEST-T-001.json");
 
     const written = JSON.parse(readFileSync(join(sessionDir, "state.json"), "utf-8")) as FullSessionState;
     expect(written.completedTickets[0]?.commitHash).toBe(A40);
@@ -195,7 +195,7 @@ describe("ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
       .map((l) => JSON.parse(l) as { type: string; data: Record<string, unknown> });
     const commitEvent = events.find((e) => e.type === "commit");
     expect(commitEvent?.data.commitHash).toBe(A40);
-    expect(commitEvent?.data.ticketId).toBe("T-001");
+    expect(commitEvent?.data.ticketId).toBe("TEST-T-001");
   });
 
   it("5. acceptsReportWhenMultipleCandidateCommitsTouchedArtifact — multiplicity is OK", async () => {
@@ -247,7 +247,7 @@ describe("ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
 
     expect(advance.action).toBe("retry");
     expect(advance.instruction).toContain("No commit on the session ancestry path touched");
-    expect(advance.instruction).toContain(".story/tickets/T-001.json");
+    expect(advance.instruction).toContain(".story/tickets/TEST-T-001.json");
   });
 
   it("8. rejectsReportForNonexistentCommit — rev-parse fails", async () => {
@@ -287,7 +287,7 @@ describe("ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
 
     const state = makeState({
       ticket: undefined,
-      currentIssue: { id: "ISS-999", title: "Test issue", severity: "high" },
+      currentIssue: { id: "TEST-ISS-999", title: "Test issue", severity: "high" },
       git: { branch: "main", mergeBase: E40, expectedHead: E40, initHead: B40 } as FullSessionState["git"],
     } as Partial<FullSessionState>);
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -295,10 +295,10 @@ describe("ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
     const advance = await stage.report(ctx, { completedAction: "commit_done", commitHash: "aaaaaaa" });
 
     expect(advance.action).toBe("goto");
-    expect(mockedGitRevListAncestryPath).toHaveBeenCalledWith(testRoot, B40, E40, ".story/issues/ISS-999.json");
+    expect(mockedGitRevListAncestryPath).toHaveBeenCalledWith(testRoot, B40, E40, ".story/issues/TEST-ISS-999.json");
 
     const written = JSON.parse(readFileSync(join(sessionDir, "state.json"), "utf-8")) as FullSessionState;
-    expect(written.resolvedIssues).toContain("ISS-999");
+    expect(written.resolvedIssues).toContain("TEST-ISS-999");
     expect(written.git.expectedHead).toBe(E40);
     expect(written.git.mergeBase).toBe(E40);
   });
@@ -332,7 +332,7 @@ describe("ISS-378: FINALIZE commit-hash HEAD-drift validation", () => {
 
     expect(advance.action).toBe("retry");
     expect(advance.instruction).toContain("Cannot enumerate candidate commits");
-    expect(advance.instruction).toContain(".story/tickets/T-001.json");
+    expect(advance.instruction).toContain(".story/tickets/TEST-T-001.json");
     expect(advance.instruction).toContain("rev-list crashed");
   });
 

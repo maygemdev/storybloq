@@ -65,8 +65,8 @@ function setupProject(dir: string): void {
     blockers: [],
   }));
   // Add a ticket for sessions to reference
-  writeFileSync(join(storyDir, "tickets", "T-001.json"), JSON.stringify({
-    id: "T-001", title: "Test ticket", type: "task", status: "open",
+  writeFileSync(join(storyDir, "tickets", "TEST-T-001.json"), JSON.stringify({
+    id: "TEST-T-001", title: "Test ticket", type: "task", status: "open",
     phase: "p1", order: 10, description: "", createdDate: "2026-03-30",
     blockedBy: [], parentTicket: null,
   }));
@@ -83,7 +83,7 @@ function createCompactSession(dir: string, overrides: Partial<FullSessionState> 
   const working = writeSessionSync(sessDir, {
     ...session,
     state: overrides.preCompactState ?? "PLAN",
-    ticket: overrides.ticket ?? { id: "T-001", title: "Test ticket", risk: "low", claimed: true },
+    ticket: overrides.ticket ?? { id: "TEST-T-001", title: "Test ticket", risk: "low", claimed: true },
     git: { branch: "main", mergeBase: "abc123", expectedHead: "abc123", initHead: "abc123" },
     reviews: overrides.reviews ?? { plan: [], code: [] },
   });
@@ -279,7 +279,7 @@ describe("handleResume integration (ISS-039)", () => {
   });
 });
 
-describe("T-187: resumed event logging", () => {
+describe("TEST-T-187: resumed event logging", () => {
   it("Branch A: appends 'resumed' event with headMatch: true", async () => {
     const session = createCompactSession(root, { preCompactState: "PLAN" });
     mockedGitHead.mockResolvedValue({ ok: true, data: { hash: "abc123" } });
@@ -295,7 +295,7 @@ describe("T-187: resumed event logging", () => {
     expect(resumed).toHaveLength(1);
     expect(resumed[0].data.headMatch).toBe(true);
     expect(resumed[0].data.preCompactState).toBe("PLAN");
-    expect(resumed[0].data.ticketId).toBe("T-001");
+    expect(resumed[0].data.ticketId).toBe("TEST-T-001");
     expect(resumed[0].data.compactionCount).toBeGreaterThanOrEqual(1);
   });
 
@@ -317,7 +317,7 @@ describe("T-187: resumed event logging", () => {
     expect(resumed[0].data.headMatch).toBe(false);
     expect(resumed[0].data.preCompactState).toBe("PLAN");
     expect(resumed[0].data.recoveryState).toBe("PLAN");
-    expect(resumed[0].data.ticketId).toBe("T-001");
+    expect(resumed[0].data.ticketId).toBe("TEST-T-001");
   });
 
   it("Branch C: does NOT append 'resumed' event (failure path)", async () => {
@@ -338,7 +338,7 @@ describe("T-187: resumed event logging", () => {
   });
 });
 
-describe("T-183: resume marker cleanup", () => {
+describe("TEST-T-183: resume marker cleanup", () => {
   const markerPath = () => join(root, ".claude", "rules", "autonomous-resume.md");
 
   it("Branch A: removes marker after successful resume", async () => {
@@ -384,7 +384,7 @@ describe("T-183: resume marker cleanup", () => {
   });
 });
 
-describe("T-184: own-commit drift tolerance", () => {
+describe("TEST-T-184: own-commit drift tolerance", () => {
   it("own-commit drift resumes at preCompactState (no recovery)", async () => {
     const session = createCompactSession(root, { preCompactState: "IMPLEMENT" });
     mockedGitHead.mockResolvedValue({ ok: true, data: { hash: "own-commit-head" } });

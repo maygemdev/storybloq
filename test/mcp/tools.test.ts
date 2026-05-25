@@ -35,7 +35,7 @@ describe("runMcpReadTool — happy path", () => {
     const { handleStatus } = await import("../../src/cli/commands/status.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
     });
     const ctx: CommandContext = {
       state,
@@ -70,7 +70,7 @@ describe("runMcpReadTool — happy path", () => {
     const { handleTicketGet } = await import("../../src/cli/commands/ticket.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      tickets: [makeTicket({ id: "T-001", title: "First Ticket", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", title: "First Ticket", phase: "p1" })],
     });
     const ctx: CommandContext = {
       state,
@@ -79,7 +79,7 @@ describe("runMcpReadTool — happy path", () => {
       handoversDir: "/tmp/test/.story/handovers",
       format: "md",
     };
-    const result = handleTicketGet("T-001", ctx);
+    const result = handleTicketGet("TEST-T-001", ctx);
     expect(result.output).toContain("First Ticket");
     expect(result.errorCode).toBeUndefined();
   });
@@ -96,7 +96,7 @@ describe("runMcpReadTool — happy path", () => {
       handoversDir: "/tmp/test/.story/handovers",
       format: "md",
     };
-    const result = handleTicketGet("T-999", ctx);
+    const result = handleTicketGet("TEST-T-999", ctx);
     expect(result.errorCode).toBe("not_found");
     expect(result.output).toContain("not found");
   });
@@ -105,7 +105,7 @@ describe("runMcpReadTool — happy path", () => {
     const { handleIssueGet } = await import("../../src/cli/commands/issue.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      issues: [makeIssue({ id: "ISS-001", title: "Bug Report" })],
+      issues: [makeIssue({ id: "TEST-ISS-001", title: "Bug Report" })],
     });
     const ctx: CommandContext = {
       state,
@@ -114,7 +114,7 @@ describe("runMcpReadTool — happy path", () => {
       handoversDir: "/tmp/test/.story/handovers",
       format: "md",
     };
-    const result = handleIssueGet("ISS-001", ctx);
+    const result = handleIssueGet("TEST-ISS-001", ctx);
     expect(result.output).toContain("Bug Report");
   });
 
@@ -128,7 +128,7 @@ describe("runMcpReadTool — happy path", () => {
       handoversDir: "/tmp/test/.story/handovers",
       format: "md",
     };
-    const result = handleIssueGet("ISS-999", ctx);
+    const result = handleIssueGet("TEST-ISS-999", ctx);
     expect(result.errorCode).toBe("not_found");
   });
 
@@ -137,8 +137,8 @@ describe("runMcpReadTool — happy path", () => {
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       tickets: [
-        makeTicket({ id: "T-001", status: "open", phase: "p1" }),
-        makeTicket({ id: "T-002", status: "complete", phase: "p1", order: 20 }),
+        makeTicket({ id: "TEST-T-001", status: "open", phase: "p1" }),
+        makeTicket({ id: "TEST-T-002", status: "complete", phase: "p1", order: 20 }),
       ],
     });
     const ctx: CommandContext = {
@@ -149,15 +149,15 @@ describe("runMcpReadTool — happy path", () => {
       format: "md",
     };
     const result = handleTicketList({ status: "open" }, ctx);
-    expect(result.output).toContain("T-001");
-    expect(result.output).not.toContain("T-002");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).not.toContain("TEST-T-002");
   });
 
   it("handleTicketNext returns result", async () => {
     const { handleTicketNext } = await import("../../src/cli/commands/ticket.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      tickets: [makeTicket({ id: "T-001", status: "open", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", status: "open", phase: "p1" })],
     });
     const ctx: CommandContext = {
       state,
@@ -167,7 +167,7 @@ describe("runMcpReadTool — happy path", () => {
       format: "md",
     };
     const result = handleTicketNext(ctx);
-    expect(result.output).toContain("T-001");
+    expect(result.output).toContain("TEST-T-001");
     // ticket_next has no errorCode even when no tickets found — it's informational
     expect(result.errorCode).toBeUndefined();
   });
@@ -208,7 +208,7 @@ describe("runMcpReadTool — happy path", () => {
     const { handleValidate } = await import("../../src/cli/commands/validate.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
     });
     const ctx: CommandContext = {
       state,
@@ -254,7 +254,7 @@ describe("runMcpReadTool — error classification", () => {
       handoversDir: "/tmp/test/.story/handovers",
       format: "md",
     };
-    const result = handleTicketGet("T-999", ctx);
+    const result = handleTicketGet("TEST-T-999", ctx);
     // not_found is informational, not infrastructure
     expect(result.errorCode).toBe("not_found");
     // In the MCP pipeline, this would NOT set isError
@@ -264,7 +264,7 @@ describe("runMcpReadTool — error classification", () => {
     const { handleTicketNext } = await import("../../src/cli/commands/ticket.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      tickets: [makeTicket({ id: "T-001", status: "complete", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", status: "complete", phase: "p1" })],
     });
     const ctx: CommandContext = {
       state,
@@ -329,7 +329,7 @@ describe("handler format lock", () => {
     const { handleStatus } = await import("../../src/cli/commands/status.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
     });
     const ctx: CommandContext = {
       state,
@@ -347,7 +347,7 @@ describe("handler format lock", () => {
     const { handleStatus } = await import("../../src/cli/commands/status.js");
     const state = makeState({
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
     });
     const ctx: CommandContext = {
       state,

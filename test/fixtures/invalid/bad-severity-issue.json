@@ -1,5 +1,5 @@
 {
-  "id": "ISS-100",
+  "id": "TEST-ISS-100",
   "title": "Issue with bad severity",
   "status": "open",
   "severity": "extreme",

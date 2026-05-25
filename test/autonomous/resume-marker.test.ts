@@ -20,9 +20,9 @@ afterEach(() => {
 describe("writeResumeMarker", () => {
   it("writes marker file with correct content", () => {
     writeResumeMarker(root, "test-session-id", {
-      ticket: { id: "T-042", title: "Build the thing" },
-      completedTickets: [{ id: "T-001" }, { id: "T-002" }],
-      resolvedIssues: ["ISS-001"],
+      ticket: { id: "TEST-T-042", title: "Build the thing" },
+      completedTickets: [{ id: "TEST-T-001" }, { id: "TEST-T-002" }],
+      resolvedIssues: ["TEST-ISS-001"],
       preCompactState: "IMPLEMENT",
     });
 
@@ -32,7 +32,7 @@ describe("writeResumeMarker", () => {
     const content = readFileSync(path, "utf-8");
     expect(content).toContain("CRITICAL");
     expect(content).toContain("test-session-id");
-    expect(content).toContain("T-042");
+    expect(content).toContain("TEST-T-042");
     expect(content).toContain("Build the thing");
     expect(content).toContain("2 tickets completed");
     expect(content).toContain("1 issues resolved");

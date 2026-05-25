@@ -6,13 +6,13 @@ describe("ChannelEventSchema", () => {
     const data = {
       event: "ticket_requested",
       timestamp: "2026-04-05T10:00:00.000Z",
-      payload: { ticketId: "T-001" },
+      payload: { ticketId: "TEST-T-001" },
     };
     const result = ChannelEventSchema.safeParse(data);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.event).toBe("ticket_requested");
-      expect(result.data.payload).toEqual({ ticketId: "T-001" });
+      expect(result.data.payload).toEqual({ ticketId: "TEST-T-001" });
     }
   });
 
@@ -59,11 +59,11 @@ describe("ChannelEventSchema", () => {
     const result = ChannelEventSchema.safeParse({
       event: "priority_changed",
       timestamp: "2026-04-05T10:00:00.000Z",
-      payload: { ticketId: "T-050", newOrder: 3 },
+      payload: { ticketId: "TEST-T-050", newOrder: 3 },
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.payload).toEqual({ ticketId: "T-050", newOrder: 3 });
+      expect(result.data.payload).toEqual({ ticketId: "TEST-T-050", newOrder: 3 });
     }
   });
 
@@ -138,7 +138,7 @@ describe("ChannelEventSchema", () => {
     const result = ChannelEventSchema.safeParse({
       event: "priority_changed",
       timestamp: "2026-04-05T10:00:00.000Z",
-      payload: { ticketId: "T-001", newOrder: 3.5 },
+      payload: { ticketId: "TEST-T-001", newOrder: 3.5 },
     });
     expect(result.success).toBe(false);
   });
@@ -147,7 +147,7 @@ describe("ChannelEventSchema", () => {
     const result = ChannelEventSchema.safeParse({
       event: "ticket_requested",
       timestamp: "2026-04-05T10:00:00.000Z",
-      payload: { ticketId: "T-005a" },
+      payload: { ticketId: "TEST-T-005a" },
     });
     expect(result.success).toBe(true);
   });
@@ -221,9 +221,9 @@ describe("formatChannelContent", () => {
     const content = formatChannelContent({
       event: "ticket_requested",
       timestamp: "2026-04-05T10:00:00Z",
-      payload: { ticketId: "T-001" },
+      payload: { ticketId: "TEST-T-001" },
     });
-    expect(content).toBe("User requested ticket T-001 be started.");
+    expect(content).toBe("User requested ticket TEST-T-001 be started.");
   });
 
   it("formats pause_session", () => {
@@ -268,9 +268,9 @@ describe("formatChannelContent", () => {
     const content = formatChannelContent({
       event: "priority_changed",
       timestamp: "2026-04-05T10:00:00Z",
-      payload: { ticketId: "T-050", newOrder: 3 },
+      payload: { ticketId: "TEST-T-050", newOrder: 3 },
     });
-    expect(content).toContain("T-050");
+    expect(content).toContain("TEST-T-050");
     expect(content).toContain("3");
   });
 });
@@ -289,9 +289,9 @@ describe("formatChannelMeta", () => {
     const meta = formatChannelMeta({
       event: "ticket_requested",
       timestamp: "2026-04-05T10:00:00Z",
-      payload: { ticketId: "T-001" },
+      payload: { ticketId: "TEST-T-001" },
     });
-    expect(meta.ticketId).toBe("T-001");
+    expect(meta.ticketId).toBe("TEST-T-001");
   });
 
   it("includes reason for cancel_session when present", () => {
@@ -316,9 +316,9 @@ describe("formatChannelMeta", () => {
     const meta = formatChannelMeta({
       event: "priority_changed",
       timestamp: "2026-04-05T10:00:00Z",
-      payload: { ticketId: "T-050", newOrder: 3 },
+      payload: { ticketId: "TEST-T-050", newOrder: 3 },
     });
-    expect(meta.ticketId).toBe("T-050");
+    expect(meta.ticketId).toBe("TEST-T-050");
     expect(meta.newOrder).toBe("3");
   });
 });

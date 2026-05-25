@@ -130,7 +130,7 @@ describe("fencedBlock", () => {
 describe("formatStatus", () => {
   it("JSON returns valid parseable envelope", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const json = formatStatus(state, "json");
@@ -142,7 +142,7 @@ describe("formatStatus", () => {
 
   it("MD returns readable summary", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const md = formatStatus(state, "md");
@@ -153,9 +153,9 @@ describe("formatStatus", () => {
   it("counts exclude umbrellas (leaf-only)", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", status: "complete" }), // umbrella
-        makeTicket({ id: "T-002", phase: "p1", status: "complete", parentTicket: "T-001" }),
-        makeTicket({ id: "T-003", phase: "p1", status: "open", parentTicket: "T-001" }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" }), // umbrella
+        makeTicket({ id: "TEST-T-002", phase: "p1", status: "complete", parentTicket: "TEST-T-001" }),
+        makeTicket({ id: "TEST-T-003", phase: "p1", status: "open", parentTicket: "TEST-T-001" }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -172,10 +172,10 @@ describe("formatStatus", () => {
   it("handles deeply nested umbrellas", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1" }), // top umbrella
-        makeTicket({ id: "T-002", phase: "p1", parentTicket: "T-001" }), // mid umbrella
-        makeTicket({ id: "T-003", phase: "p1", status: "complete", parentTicket: "T-002" }), // leaf
-        makeTicket({ id: "T-004", phase: "p1", status: "open", parentTicket: "T-002" }), // leaf
+        makeTicket({ id: "TEST-T-001", phase: "p1" }), // top umbrella
+        makeTicket({ id: "TEST-T-002", phase: "p1", parentTicket: "TEST-T-001" }), // mid umbrella
+        makeTicket({ id: "TEST-T-003", phase: "p1", status: "complete", parentTicket: "TEST-T-002" }), // leaf
+        makeTicket({ id: "TEST-T-004", phase: "p1", status: "open", parentTicket: "TEST-T-002" }), // leaf
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -195,7 +195,7 @@ describe("formatStatus", () => {
 
   it("JSON includes isEmptyScaffold: false for populated project", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const json = formatStatus(state, "json");
@@ -212,7 +212,7 @@ describe("formatStatus", () => {
 
   it("markdown excludes Getting Started section for populated project", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const md = formatStatus(state, "md");
@@ -246,21 +246,21 @@ describe("formatNextTicketOutcome", () => {
   it("formats found ticket with unblock impact", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", status: "open" }),
-        makeTicket({ id: "T-002", phase: "p1", status: "open", blockedBy: ["T-001"] }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", status: "open", blockedBy: ["TEST-T-001"] }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const outcome: NextTicketOutcome = {
       kind: "found",
       ticket: state.tickets[0]!,
-      unblockImpact: { ticketId: "T-001", wouldUnblock: [state.tickets[1]!] },
+      unblockImpact: { ticketId: "TEST-T-001", wouldUnblock: [state.tickets[1]!] },
       umbrellaProgress: null,
     };
     const md = formatNextTicketOutcome(outcome, state, "md");
-    expect(md).toContain("T-001");
+    expect(md).toContain("TEST-T-001");
     expect(md).toContain("Completing this unblocks");
-    expect(md).toContain("T-002");
+    expect(md).toContain("TEST-T-002");
   });
 
   it("formats all_complete", () => {
@@ -300,26 +300,26 @@ describe("formatNextTicketOutcome", () => {
 describe("formatNextTicketsOutcome", () => {
   it("single candidate uses # Next: format", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: "p1", description: "Do stuff" })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", description: "Do stuff" })],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
     const outcome: NextTicketsOutcome = {
       kind: "found",
       candidates: [{
         ticket: state.tickets[0]!,
-        unblockImpact: { ticketId: "T-001", wouldUnblock: [] },
+        unblockImpact: { ticketId: "TEST-T-001", wouldUnblock: [] },
         umbrellaProgress: null,
       }],
       skippedBlockedPhases: [],
     };
     const md = formatNextTicketsOutcome(outcome, state, "md");
-    expect(md).toContain("# Next: T-001");
+    expect(md).toContain("# Next: TEST-T-001");
     expect(md).not.toContain("# 1.");
   });
 
   it("multiple candidates use numbered format with separator", () => {
-    const t1 = makeTicket({ id: "T-001", phase: "p1", order: 10 });
-    const t2 = makeTicket({ id: "T-002", phase: "p1", order: 20 });
+    const t1 = makeTicket({ id: "TEST-T-001", phase: "p1", order: 10 });
+    const t2 = makeTicket({ id: "TEST-T-002", phase: "p1", order: 20 });
     const state = makeState({
       tickets: [t1, t2],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
@@ -327,25 +327,25 @@ describe("formatNextTicketsOutcome", () => {
     const outcome: NextTicketsOutcome = {
       kind: "found",
       candidates: [
-        { ticket: t1, unblockImpact: { ticketId: "T-001", wouldUnblock: [] }, umbrellaProgress: null },
-        { ticket: t2, unblockImpact: { ticketId: "T-002", wouldUnblock: [] }, umbrellaProgress: null },
+        { ticket: t1, unblockImpact: { ticketId: "TEST-T-001", wouldUnblock: [] }, umbrellaProgress: null },
+        { ticket: t2, unblockImpact: { ticketId: "TEST-T-002", wouldUnblock: [] }, umbrellaProgress: null },
       ],
       skippedBlockedPhases: [],
     };
     const md = formatNextTicketsOutcome(outcome, state, "md");
-    expect(md).toContain("# 1. T-001");
-    expect(md).toContain("# 2. T-002");
+    expect(md).toContain("# 1. TEST-T-001");
+    expect(md).toContain("# 2. TEST-T-002");
     expect(md).toContain("---");
   });
 
   it("JSON contains candidates array and skippedBlockedPhases", () => {
-    const t1 = makeTicket({ id: "T-001", phase: "p1" });
+    const t1 = makeTicket({ id: "TEST-T-001", phase: "p1" });
     const state = makeState({ tickets: [t1] });
     const outcome: NextTicketsOutcome = {
       kind: "found",
       candidates: [{
         ticket: t1,
-        unblockImpact: { ticketId: "T-001", wouldUnblock: [] },
+        unblockImpact: { ticketId: "TEST-T-001", wouldUnblock: [] },
         umbrellaProgress: null,
       }],
       skippedBlockedPhases: [{ phaseId: "p0", blockedCount: 2 }],
@@ -357,13 +357,13 @@ describe("formatNextTicketsOutcome", () => {
   });
 
   it("renders skipped phases footer when present", () => {
-    const t1 = makeTicket({ id: "T-001", phase: "p2" });
+    const t1 = makeTicket({ id: "TEST-T-001", phase: "p2" });
     const state = makeState({ tickets: [t1] });
     const outcome: NextTicketsOutcome = {
       kind: "found",
       candidates: [{
         ticket: t1,
-        unblockImpact: { ticketId: "T-001", wouldUnblock: [] },
+        unblockImpact: { ticketId: "TEST-T-001", wouldUnblock: [] },
         umbrellaProgress: null,
       }],
       skippedBlockedPhases: [{ phaseId: "p1", blockedCount: 3 }],
@@ -389,13 +389,13 @@ describe("formatNextTicketsOutcome", () => {
   });
 
   it("renders umbrella progress when populated", () => {
-    const t1 = makeTicket({ id: "T-001", phase: "p1" });
+    const t1 = makeTicket({ id: "TEST-T-001", phase: "p1" });
     const state = makeState({ tickets: [t1] });
     const outcome: NextTicketsOutcome = {
       kind: "found",
       candidates: [{
         ticket: t1,
-        unblockImpact: { ticketId: "T-001", wouldUnblock: [] },
+        unblockImpact: { ticketId: "TEST-T-001", wouldUnblock: [] },
         umbrellaProgress: { total: 5, complete: 2, status: "inprogress" },
       }],
       skippedBlockedPhases: [],
@@ -428,16 +428,16 @@ describe("formatNextTicketsOutcome", () => {
 
 describe("formatError", () => {
   it("JSON returns error envelope", () => {
-    const json = formatError("not_found", "Ticket T-999 not found", "json");
+    const json = formatError("not_found", "Ticket TEST-T-999 not found", "json");
     const parsed = JSON.parse(json);
     expect(parsed.version).toBe(1);
     expect(parsed.error.code).toBe("not_found");
   });
 
   it("MD returns readable error", () => {
-    const md = formatError("not_found", "Ticket T-999 not found", "md");
+    const md = formatError("not_found", "Ticket TEST-T-999 not found", "md");
     expect(md).toContain("not_found");
-    expect(md).toContain("T-999");
+    expect(md).toContain("TEST-T-999");
   });
 });
 
@@ -449,8 +449,8 @@ describe("formatValidation", () => {
       warningCount: 1,
       infoCount: 0,
       findings: [
-        { level: "error", code: "test", message: "Error 1", entity: "T-001" },
-        { level: "error", code: "test", message: "Error 2", entity: "T-002" },
+        { level: "error", code: "test", message: "Error 1", entity: "TEST-T-001" },
+        { level: "error", code: "test", message: "Error 2", entity: "TEST-T-002" },
         { level: "warning", code: "test", message: "Warning 1", entity: null },
       ],
     };
@@ -479,15 +479,15 @@ describe("formatInitResult", () => {
   });
 
   it("MD shows warning when corrupt files found", () => {
-    const md = formatInitResult({ root: "/tmp/test", created: [".story/config.json"], warnings: [".story/tickets/T-099.json"] }, "md");
+    const md = formatInitResult({ root: "/tmp/test", created: [".story/config.json"], warnings: [".story/tickets/TEST-T-099.json"] }, "md");
     expect(md).toContain("1 corrupt file(s) found");
     expect(md).toContain("storybloq validate");
   });
 
   it("JSON includes warnings array", () => {
-    const json = formatInitResult({ root: "/tmp/test", created: [".story/config.json"], warnings: [".story/tickets/T-099.json"] }, "json");
+    const json = formatInitResult({ root: "/tmp/test", created: [".story/config.json"], warnings: [".story/tickets/TEST-T-099.json"] }, "json");
     const parsed = JSON.parse(json);
-    expect(parsed.data.warnings).toEqual([".story/tickets/T-099.json"]);
+    expect(parsed.data.warnings).toEqual([".story/tickets/TEST-T-099.json"]);
   });
 
   it("MD omits warning line when no corrupt files", () => {
@@ -498,8 +498,8 @@ describe("formatInitResult", () => {
 
 describe("all format functions produce valid JSON", () => {
   const state = makeState({
-    tickets: [makeTicket({ id: "T-001", phase: "p1" })],
-    issues: [makeIssue({ id: "ISS-001" })],
+    tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
+    issues: [makeIssue({ id: "TEST-ISS-001" })],
     roadmap: makeRoadmap([makePhase({ id: "p1" })]),
   });
 
@@ -517,20 +517,20 @@ describe("all format functions produce valid JSON", () => {
 });
 
 describe("formatRecommendations", () => {
-  const populatedState = makeState({ tickets: [makeTicket({ id: "T-001" })] });
+  const populatedState = makeState({ tickets: [makeTicket({ id: "TEST-T-001" })] });
 
   it("markdown numbered list with reason lines", () => {
     const result: RecommendResult = {
       recommendations: [
-        { id: "ISS-001", kind: "issue", title: "Bug", category: "critical_issue", reason: "Critical issue", score: 900 },
-        { id: "T-001", kind: "ticket", title: "Task", category: "inprogress_ticket", reason: "In-progress", score: 800 },
+        { id: "TEST-ISS-001", kind: "issue", title: "Bug", category: "critical_issue", reason: "Critical issue", score: 900 },
+        { id: "TEST-T-001", kind: "ticket", title: "Task", category: "inprogress_ticket", reason: "In-progress", score: 800 },
       ],
       totalCandidates: 2,
     };
     const md = formatRecommendations(result, populatedState, "md");
     expect(md).toContain("# Recommendations");
-    expect(md).toContain("1. **ISS-001** (issue)");
-    expect(md).toContain("2. **T-001** (ticket)");
+    expect(md).toContain("1. **TEST-ISS-001** (issue)");
+    expect(md).toContain("2. **TEST-T-001** (ticket)");
     expect(md).toContain("_Critical issue_");
     expect(md).toContain("_In-progress_");
   });
@@ -553,7 +553,7 @@ describe("formatRecommendations", () => {
   it("JSON envelope with recommendations + totalCandidates", () => {
     const result: RecommendResult = {
       recommendations: [
-        { id: "T-001", kind: "ticket", title: "Task", category: "quick_win", reason: "Chore", score: 400 },
+        { id: "TEST-T-001", kind: "ticket", title: "Task", category: "quick_win", reason: "Chore", score: 400 },
       ],
       totalCandidates: 5,
     };
@@ -576,7 +576,7 @@ describe("formatRecommendations", () => {
   it("footer shows 'Showing X of Y' when truncated", () => {
     const result: RecommendResult = {
       recommendations: [
-        { id: "T-001", kind: "ticket", title: "Task", category: "quick_win", reason: "Chore", score: 400 },
+        { id: "TEST-T-001", kind: "ticket", title: "Task", category: "quick_win", reason: "Chore", score: 400 },
       ],
       totalCandidates: 8,
     };

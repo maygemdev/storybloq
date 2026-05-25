@@ -84,7 +84,7 @@ function writeMinimalState(dir: string, sessionId: string): void {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("T-251 resolveSessionSelector", () => {
+describe("TEST-T-251 resolveSessionSelector", () => {
   it("resolverAcceptsUniquePrefix: two sessions with distinct 4-char prefixes resolve by prefix", () => {
     const root = setupRoot();
     const a = "aaaaaaaa-0000-0000-0000-000000000001";

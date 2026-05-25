@@ -4,60 +4,60 @@ import { makeTicket, makeIssue, makeNote, makeLesson, makeState, makeRoadmap, ma
 
 describe("nextTicketID", () => {
   it("returns T-001 for empty array", () => {
-    expect(nextTicketID([])).toBe("T-001");
+    expect(nextTicketID([], "TEST")).toBe("TEST-T-001");
   });
 
   it("returns T-002 when max is T-001", () => {
-    const tickets = [makeTicket({ id: "T-001" })];
-    expect(nextTicketID(tickets)).toBe("T-002");
+    const tickets = [makeTicket({ id: "TEST-T-001" })];
+    expect(nextTicketID(tickets, "TEST")).toBe("TEST-T-002");
   });
 
   it("handles suffixed IDs — T-077a → numeric 77, returns T-078", () => {
     const tickets = [
-      makeTicket({ id: "T-001" }),
-      makeTicket({ id: "T-077" }),
-      makeTicket({ id: "T-077a" }),
+      makeTicket({ id: "TEST-T-001" }),
+      makeTicket({ id: "TEST-T-077" }),
+      makeTicket({ id: "TEST-T-077a" }),
     ];
-    expect(nextTicketID(tickets)).toBe("T-078");
+    expect(nextTicketID(tickets, "TEST")).toBe("TEST-T-078");
   });
 
   it("handles large numbers without excess padding", () => {
-    const tickets = [makeTicket({ id: "T-999" })];
-    expect(nextTicketID(tickets)).toBe("T-1000");
+    const tickets = [makeTicket({ id: "TEST-T-999" })];
+    expect(nextTicketID(tickets, "TEST")).toBe("TEST-T-1000");
   });
 
   it("handles non-contiguous IDs", () => {
     const tickets = [
-      makeTicket({ id: "T-001" }),
-      makeTicket({ id: "T-005" }),
-      makeTicket({ id: "T-010" }),
+      makeTicket({ id: "TEST-T-001" }),
+      makeTicket({ id: "TEST-T-005" }),
+      makeTicket({ id: "TEST-T-010" }),
     ];
-    expect(nextTicketID(tickets)).toBe("T-011");
+    expect(nextTicketID(tickets, "TEST")).toBe("TEST-T-011");
   });
 
   it("handles mixed suffixed and non-suffixed", () => {
     const tickets = [
-      makeTicket({ id: "T-077" }),
-      makeTicket({ id: "T-077a" }),
-      makeTicket({ id: "T-077b" }),
+      makeTicket({ id: "TEST-T-077" }),
+      makeTicket({ id: "TEST-T-077a" }),
+      makeTicket({ id: "TEST-T-077b" }),
     ];
-    expect(nextTicketID(tickets)).toBe("T-078");
+    expect(nextTicketID(tickets, "TEST")).toBe("TEST-T-078");
   });
 });
 
 describe("nextIssueID", () => {
   it("returns ISS-001 for empty array", () => {
-    expect(nextIssueID([])).toBe("ISS-001");
+    expect(nextIssueID([], "TEST")).toBe("TEST-ISS-001");
   });
 
   it("returns ISS-010 when max is ISS-009", () => {
-    const issues = [makeIssue({ id: "ISS-009" })];
-    expect(nextIssueID(issues)).toBe("ISS-010");
+    const issues = [makeIssue({ id: "TEST-ISS-009" })];
+    expect(nextIssueID(issues, "TEST")).toBe("TEST-ISS-010");
   });
 
   it("handles large numbers", () => {
-    const issues = [makeIssue({ id: "ISS-999" })];
-    expect(nextIssueID(issues)).toBe("ISS-1000");
+    const issues = [makeIssue({ id: "TEST-ISS-999" })];
+    expect(nextIssueID(issues, "TEST")).toBe("TEST-ISS-1000");
   });
 });
 
@@ -116,8 +116,8 @@ describe("nextOrder", () => {
   it("returns max + 10 for non-empty phase", () => {
     const state = makeState({
       tickets: [
-        makeTicket({ id: "T-001", phase: "p1", order: 10 }),
-        makeTicket({ id: "T-002", phase: "p1", order: 30 }),
+        makeTicket({ id: "TEST-T-001", phase: "p1", order: 10 }),
+        makeTicket({ id: "TEST-T-002", phase: "p1", order: 30 }),
       ],
       roadmap: makeRoadmap([makePhase({ id: "p1" })]),
     });
@@ -126,7 +126,7 @@ describe("nextOrder", () => {
 
   it("handles null phase", () => {
     const state = makeState({
-      tickets: [makeTicket({ id: "T-001", phase: null, order: 20 })],
+      tickets: [makeTicket({ id: "TEST-T-001", phase: null, order: 20 })],
     });
     expect(nextOrder(null, state)).toBe(30);
   });

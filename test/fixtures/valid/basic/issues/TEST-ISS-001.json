@@ -1,5 +1,5 @@
 {
-  "id": "ISS-001",
+  "id": "TEST-ISS-001",
   "title": "Build fails on Node 18",
   "status": "resolved",
   "severity": "high",
@@ -9,5 +9,5 @@
   "location": ["package.json:5"],
   "discoveredDate": "2026-01-02",
   "resolvedDate": "2026-01-03",
-  "relatedTickets": ["T-001"]
+  "relatedTickets": ["TEST-T-001"]
 }

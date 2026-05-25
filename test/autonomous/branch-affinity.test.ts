@@ -22,62 +22,62 @@ describe("detectBranchAffinity", () => {
   });
 
   it("detects ticket ID in story/ prefix", () => {
-    const result = detectBranchAffinity("story/T-012-rebrand");
+    const result = detectBranchAffinity("story/TEST-T-012-rebrand");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["T-012"]);
+    expect(result.matchedIds).toEqual(["TEST-T-012"]);
   });
 
   it("detects ticket ID in feature/ prefix", () => {
-    const result = detectBranchAffinity("feature/foo-T-123-bar");
+    const result = detectBranchAffinity("feature/foo-TEST-T-123-bar");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["T-123"]);
+    expect(result.matchedIds).toEqual(["TEST-T-123"]);
   });
 
   it("detects issue ID in fix/ prefix", () => {
-    const result = detectBranchAffinity("fix/ISS-077-crash");
+    const result = detectBranchAffinity("fix/TEST-ISS-077-crash");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["ISS-077"]);
+    expect(result.matchedIds).toEqual(["TEST-ISS-077"]);
   });
 
   it("detects bare ticket ID", () => {
-    const result = detectBranchAffinity("T-012-slug");
+    const result = detectBranchAffinity("TEST-T-012-slug");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["T-012"]);
+    expect(result.matchedIds).toEqual(["TEST-T-012"]);
   });
 
   it("detects ticket with letter suffix preserving case", () => {
-    const result = detectBranchAffinity("story/T-012a-rebrand");
+    const result = detectBranchAffinity("story/TEST-T-012a-rebrand");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["T-012a"]);
+    expect(result.matchedIds).toEqual(["TEST-T-012a"]);
   });
 
   it("handles case-insensitive matching and normalizes prefix", () => {
-    const result = detectBranchAffinity("fix/iss-077-crash");
+    const result = detectBranchAffinity("fix/test-iss-077-crash");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["ISS-077"]);
+    expect(result.matchedIds).toEqual(["TEST-ISS-077"]);
   });
 
   it("returns ambiguous for multiple distinct IDs", () => {
-    const result = detectBranchAffinity("feature/T-012-and-T-013");
+    const result = detectBranchAffinity("feature/TEST-T-012-and-TEST-T-013");
     expect(result.status).toBe("ambiguous");
-    expect(result.matchedIds).toContain("T-012");
-    expect(result.matchedIds).toContain("T-013");
+    expect(result.matchedIds).toContain("TEST-T-012");
+    expect(result.matchedIds).toContain("TEST-T-013");
   });
 
   it("does not treat duplicate IDs as ambiguous", () => {
-    const result = detectBranchAffinity("story/T-012-T-012-retry");
+    const result = detectBranchAffinity("story/TEST-T-012-TEST-T-012-retry");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["T-012"]);
+    expect(result.matchedIds).toEqual(["TEST-T-012"]);
   });
 
   it("handles underscore delimiters", () => {
-    const result = detectBranchAffinity("feature_T-100_work");
+    const result = detectBranchAffinity("feature_TEST-T-100_work");
     expect(result.status).toBe("matched");
-    expect(result.matchedIds).toEqual(["T-100"]);
+    expect(result.matchedIds).toEqual(["TEST-T-100"]);
   });
 
   it("does not match IDs embedded without delimiter", () => {
-    const result = detectBranchAffinity("featureT-100work");
+    const result = detectBranchAffinity("featureTEST-T-100work");
     expect(result.status).toBe("none");
   });
 });
@@ -85,35 +85,35 @@ describe("detectBranchAffinity", () => {
 describe("checkAffinityMismatch", () => {
   it("never blocks for none status", () => {
     const affinity = { status: "none" as const, matchedIds: [], branch: "main" };
-    expect(checkAffinityMismatch(affinity, "T-100").blocked).toBe(false);
+    expect(checkAffinityMismatch(affinity, "TEST-T-100").blocked).toBe(false);
   });
 
   it("never blocks for ambiguous status", () => {
-    const affinity = { status: "ambiguous" as const, matchedIds: ["T-012", "T-013"], branch: "feature/T-012-and-T-013" };
-    expect(checkAffinityMismatch(affinity, "T-999").blocked).toBe(false);
+    const affinity = { status: "ambiguous" as const, matchedIds: ["TEST-T-012", "TEST-T-013"], branch: "feature/T-012-and-T-013" };
+    expect(checkAffinityMismatch(affinity, "TEST-T-999").blocked).toBe(false);
   });
 
   it("does not block when pick matches branch entity", () => {
-    const affinity = { status: "matched" as const, matchedIds: ["T-123"], branch: "story/T-123-foo" };
-    expect(checkAffinityMismatch(affinity, "T-123").blocked).toBe(false);
+    const affinity = { status: "matched" as const, matchedIds: ["TEST-T-123"], branch: "story/T-123-foo" };
+    expect(checkAffinityMismatch(affinity, "TEST-T-123").blocked).toBe(false);
   });
 
   it("blocks when pick does not match branch entity", () => {
-    const affinity = { status: "matched" as const, matchedIds: ["T-123"], branch: "story/T-123-foo" };
-    const result = checkAffinityMismatch(affinity, "T-456");
+    const affinity = { status: "matched" as const, matchedIds: ["TEST-T-123"], branch: "story/T-123-foo" };
+    const result = checkAffinityMismatch(affinity, "TEST-T-456");
     expect(result.blocked).toBe(true);
-    expect(result.reason).toContain("T-123");
-    expect(result.reason).toContain("T-456");
+    expect(result.reason).toContain("TEST-T-123");
+    expect(result.reason).toContain("TEST-T-456");
   });
 
   it("normalizes case for comparison", () => {
-    const affinity = { status: "matched" as const, matchedIds: ["ISS-077"], branch: "fix/ISS-077-crash" };
-    expect(checkAffinityMismatch(affinity, "iss-077").blocked).toBe(false);
+    const affinity = { status: "matched" as const, matchedIds: ["TEST-ISS-077"], branch: "fix/ISS-077-crash" };
+    expect(checkAffinityMismatch(affinity, "test-iss-077").blocked).toBe(false);
   });
 
   it("blocks issue pick on ticket branch", () => {
-    const affinity = { status: "matched" as const, matchedIds: ["T-123"], branch: "story/T-123-foo" };
-    const result = checkAffinityMismatch(affinity, "ISS-050");
+    const affinity = { status: "matched" as const, matchedIds: ["TEST-T-123"], branch: "story/T-123-foo" };
+    const result = checkAffinityMismatch(affinity, "TEST-ISS-050");
     expect(result.blocked).toBe(true);
   });
 });
@@ -125,33 +125,33 @@ describe("buildAffinityAnnotation", () => {
   });
 
   it("returns affinity text for matched status", () => {
-    const result = buildAffinityAnnotation({ status: "matched", matchedIds: ["T-123"], branch: "story/T-123-foo" });
+    const result = buildAffinityAnnotation({ status: "matched", matchedIds: ["TEST-T-123"], branch: "story/T-123-foo" });
     expect(result.warningText).toContain("[Branch affinity]");
-    expect(result.warningText).toContain("T-123");
+    expect(result.warningText).toContain("TEST-T-123");
   });
 
   it("returns warning text for ambiguous status", () => {
-    const result = buildAffinityAnnotation({ status: "ambiguous", matchedIds: ["T-012", "T-013"], branch: "feature/T-012-and-T-013" });
+    const result = buildAffinityAnnotation({ status: "ambiguous", matchedIds: ["TEST-T-012", "TEST-T-013"], branch: "feature/T-012-and-T-013" });
     expect(result.warningText).toContain("[Branch warning]");
-    expect(result.warningText).toContain("T-012");
-    expect(result.warningText).toContain("T-013");
+    expect(result.warningText).toContain("TEST-T-012");
+    expect(result.warningText).toContain("TEST-T-013");
   });
 });
 
 describe("buildMismatchHandoverInstruction", () => {
   it("includes branch name and attempted pick", () => {
-    const affinity = { status: "matched" as const, matchedIds: ["T-123"], branch: "story/T-123-foo" };
-    const result = buildMismatchHandoverInstruction(affinity, "T-456", "test-session-id");
-    expect(result).toContain("T-456");
+    const affinity = { status: "matched" as const, matchedIds: ["TEST-T-123"], branch: "story/T-123-foo" };
+    const result = buildMismatchHandoverInstruction(affinity, "TEST-T-456", "test-session-id");
+    expect(result).toContain("TEST-T-456");
     expect(result).toContain("story/T-123-foo");
-    expect(result).toContain("T-123");
+    expect(result).toContain("TEST-T-123");
     expect(result).toContain("test-session-id");
   });
 
   it("includes actionable alternatives", () => {
-    const affinity = { status: "matched" as const, matchedIds: ["T-123"], branch: "story/T-123-foo" };
-    const result = buildMismatchHandoverInstruction(affinity, "T-456", "sid");
-    expect(result).toContain("/story auto T-456");
+    const affinity = { status: "matched" as const, matchedIds: ["TEST-T-123"], branch: "story/T-123-foo" };
+    const result = buildMismatchHandoverInstruction(affinity, "TEST-T-456", "sid");
+    expect(result).toContain("/story auto TEST-T-456");
     expect(result).toContain("branchStrategy");
   });
 });

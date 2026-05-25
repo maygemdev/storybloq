@@ -262,7 +262,7 @@ function waitForProcessExit(pid: number, timeoutMs: number): Promise<boolean> {
   });
 }
 
-describePosix("T-283 spawnAliveSidecar dedup + lock", () => {
+describePosix("TEST-T-283 spawnAliveSidecar dedup + lock", () => {
   let tmpDir: string;
   let tDir: string;
   const spawnedPids: number[] = [];

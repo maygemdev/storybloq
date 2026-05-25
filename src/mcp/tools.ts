@@ -399,7 +399,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_ticket_get", {
     description: "Get a ticket by ID (includes umbrella tickets)",
     inputSchema: {
-      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. T-001, T-079b)"),
+      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. TMP7654-T-001, DEV01-T-079b)"),
       node: nodeParam,
     },
   }, (args) => {
@@ -411,7 +411,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_ticket_meta_get", {
     description: "Get custom passthrough metadata for a ticket. Omitting path returns all custom metadata.",
     inputSchema: {
-      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. T-001, T-079b)"),
+      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. TMP7654-T-001, DEV01-T-079b)"),
       path: z.string().optional().describe("Custom metadata path, using dot notation for nested values"),
     },
   }, (args) => runMcpReadTool(pinnedRoot, (ctx) => handleTicketMetaGet(args.id, args.path, ctx)));
@@ -435,7 +435,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_issue_get", {
     description: "Get an issue by ID",
     inputSchema: {
-      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. ISS-001)"),
+      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. TMP7654-ISS-001)"),
       node: nodeParam,
     },
   }, (args) => {
@@ -447,7 +447,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_issue_meta_get", {
     description: "Get custom passthrough metadata for an issue. Omitting path returns all custom metadata.",
     inputSchema: {
-      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. ISS-001)"),
+      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. TMP7654-ISS-001)"),
       path: z.string().optional().describe("Custom metadata path, using dot notation for nested values"),
     },
   }, (args) => runMcpReadTool(pinnedRoot, (ctx) => handleIssueMetaGet(args.id, args.path, ctx)));
@@ -555,7 +555,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_ticket_update", {
     description: "Update an existing ticket",
     inputSchema: {
-      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. T-001)"),
+      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. TMP7654-T-001)"),
       status: z.enum(TICKET_STATUSES).optional().describe("New status: open, inprogress, complete"),
       title: z.string().optional().describe("New title"),
       type: z.enum(TICKET_TYPES).optional().describe("New type: task, feature, chore"),
@@ -564,7 +564,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
       phase: z.string().nullable().optional().describe("New phase ID (null to clear)"),
       parentTicket: z.string().regex(TICKET_ID_REGEX).nullable().optional().describe("Parent ticket ID (null to clear)"),
       blockedBy: z.array(z.string().regex(TICKET_ID_REGEX)).optional().describe("IDs of blocking tickets"),
-      crossNodeBlockedBy: z.array(z.string().regex(CROSS_NODE_REF_REGEX)).nullable().optional().describe("Cross-node blocking refs (e.g. engine:T-061). Null to clear."),
+      crossNodeBlockedBy: z.array(z.string().regex(CROSS_NODE_REF_REGEX)).nullable().optional().describe("Cross-node blocking refs (e.g. engine:TMP7654-T-061). Null to clear."),
       node: nodeParam,
     },
   }, (args) => {
@@ -593,7 +593,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_ticket_meta_set", {
     description: "Set custom passthrough metadata on a ticket. Core ticket fields are protected.",
     inputSchema: {
-      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. T-001)"),
+      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. TMP7654-T-001)"),
       path: z.string().describe("Custom metadata path, using dot notation for nested values"),
       value: z.unknown().describe("JSON-compatible metadata value"),
     },
@@ -604,7 +604,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_ticket_meta_unset", {
     description: "Unset custom passthrough metadata on a ticket. Core ticket fields are protected.",
     inputSchema: {
-      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. T-001)"),
+      id: z.string().regex(TICKET_ID_REGEX).describe("Ticket ID (e.g. TMP7654-T-001)"),
       path: z.string().describe("Custom metadata path, using dot notation for nested values"),
     },
   }, (args) => runMcpWriteTool(pinnedRoot, (root, format) =>
@@ -648,7 +648,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_issue_update", {
     description: "Update an existing issue",
     inputSchema: {
-      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. ISS-001)"),
+      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. TMP7654-ISS-001)"),
       status: z.enum(ISSUE_STATUSES).optional().describe("New status: open, inprogress, resolved"),
       title: z.string().optional().describe("New title"),
       severity: z.enum(ISSUE_SEVERITIES).optional().describe("New severity"),
@@ -688,7 +688,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_issue_meta_set", {
     description: "Set custom passthrough metadata on an issue. Core issue fields are protected.",
     inputSchema: {
-      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. ISS-001)"),
+      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. TMP7654-ISS-001)"),
       path: z.string().describe("Custom metadata path, using dot notation for nested values"),
       value: z.unknown().describe("JSON-compatible metadata value"),
     },
@@ -699,7 +699,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   server.registerTool("storybloq_issue_meta_unset", {
     description: "Unset custom passthrough metadata on an issue. Core issue fields are protected.",
     inputSchema: {
-      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. ISS-001)"),
+      id: z.string().regex(ISSUE_ID_REGEX).describe("Issue ID (e.g. TMP7654-ISS-001)"),
       path: z.string().describe("Custom metadata path, using dot notation for nested values"),
     },
   }, (args) => runMcpWriteTool(pinnedRoot, (root, format) =>
@@ -1033,6 +1033,35 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   }, () => runMcpWriteTool(pinnedRoot, (root, format) =>
     handleSelftest(root, format),
   ));
+
+  // --- Namespace ---
+
+  server.registerTool("storybloq_namespace_set", {
+    description: "Set the ticket ID namespace for this clone (stored in .story/.local.json, gitignored). Required before creating tickets or issues.",
+    inputSchema: {
+      namespace: z.string().describe("Namespace (3-12 uppercase alphanumeric characters, e.g. TMP7654)"),
+    },
+  }, async (args) => {
+    try {
+      const { handleNamespaceSet } = await import("../cli/commands/namespace.js");
+      const result = await handleNamespaceSet(args.namespace, pinnedRoot);
+      return { content: [{ type: "text" as const, text: result.output }], isError: !!result.errorCode };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+    }
+  });
+
+  server.registerTool("storybloq_namespace_get", {
+    description: "Get the current ticket ID namespace for this clone",
+  }, async () => {
+    try {
+      const { handleNamespaceGet } = await import("../cli/commands/namespace.js");
+      const result = await handleNamespaceGet(pinnedRoot);
+      return { content: [{ type: "text" as const, text: result.output }], isError: !!result.errorCode };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+    }
+  });
 
   // --- Session report ---
 

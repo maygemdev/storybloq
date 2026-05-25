@@ -297,15 +297,15 @@ afterEach(() => {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("T-250 auto-supersede finished orphan sessions", () => {
+describe("TEST-T-250 auto-supersede finished orphan sessions", () => {
   // 1. Primary ISS-377/378 recovery path (compact + expired lease branch).
   it("autoSupersedesFinishedOrphan_issueTarget_expiredCompactPending", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-101"],
+      targetWork: ["TEST-ISS-101"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-101", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-101", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-101", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-101", kind: "issue", reachable: true }],
     }));
 
     const result = await handleAutonomousGuide(fix.root, { action: "start", sessionId: null });
@@ -325,7 +325,7 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
     const { events } = readEvents(fix.sessionDir);
     const audit = events.find((e) => e.type === "auto_superseded");
     expect(audit).toBeDefined();
-    expect(audit!.data).toMatchObject({ reason: "finished_orphan", targetWork: ["ISS-101"] });
+    expect(audit!.data).toMatchObject({ reason: "finished_orphan", targetWork: ["TEST-ISS-101"] });
     // ISS-389: typeof NaN === "number", so the previous assertion was weaker
     // than it looked. Use Number.isFinite to actually reject NaN/Infinity.
     expect(
@@ -336,22 +336,22 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
     const all = stderrWrites.join("");
     expect(all).toContain("[T-250] auto-superseded finished-orphan session");
     expect(all).toContain(fix.sessionId);
-    expect(all).toContain("targets=ISS-101");
+    expect(all).toContain("targets=TEST-ISS-101");
   });
 
   // 2. Mixed targets via stale-loop branch.
   it("autoSupersedesFinishedOrphan_mixedTargets_staleLoopCase", async () => {
     const fix = track(buildFixture({
-      targetWork: ["T-500", "ISS-500"],
+      targetWork: ["TEST-T-500", "TEST-ISS-500"],
       leaseMinutesAgo: 90,
       compactPending: false,
       onDisk: [
-        { id: "T-500", kind: "ticket", status: "complete" },
-        { id: "ISS-500", kind: "issue", status: "resolved" },
+        { id: "TEST-T-500", kind: "ticket", status: "complete" },
+        { id: "TEST-ISS-500", kind: "issue", status: "resolved" },
       ],
       commits: [
-        { id: "T-500", kind: "ticket", reachable: true },
-        { id: "ISS-500", kind: "issue", reachable: true },
+        { id: "TEST-T-500", kind: "ticket", reachable: true },
+        { id: "TEST-ISS-500", kind: "issue", reachable: true },
       ],
     }));
 
@@ -367,11 +367,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 3. Regression: second pass of stale loop must not clobber the rich reason.
   it("doesNotClobberTerminationReason", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-600"],
+      targetWork: ["TEST-ISS-600"],
       leaseMinutesAgo: 75,
       compactPending: false,
-      onDisk: [{ id: "ISS-600", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-600", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-600", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-600", kind: "issue", reachable: true }],
     }));
 
     await handleAutonomousGuide(fix.root, { action: "start", sessionId: null });
@@ -384,10 +384,10 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 4. Negative: issue still open → compact branch keeps blocking.
   it("preservesUnfinishedSession_workNotDone_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-400"],
+      targetWork: ["TEST-ISS-400"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-400", kind: "issue", status: "open" }],
+      onDisk: [{ id: "TEST-ISS-400", kind: "issue", status: "open" }],
       commits: [], // nothing committed
     }));
 
@@ -403,11 +403,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 5. Negative: ticket commit on side branch is not reachable.
   it("preservesSessionWithMissingCommit_ticket_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["T-700"],
+      targetWork: ["TEST-T-700"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "T-700", kind: "ticket", status: "complete" }],
-      commits: [{ id: "T-700", kind: "ticket", reachable: false }],
+      onDisk: [{ id: "TEST-T-700", kind: "ticket", status: "complete" }],
+      commits: [{ id: "TEST-T-700", kind: "ticket", reachable: false }],
     }));
 
     const result = await handleAutonomousGuide(fix.root, { action: "start", sessionId: null });
@@ -421,11 +421,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 6. Regression: events.log fallback must NOT apply for tickets.
   it("preservesTicketSessionWithoutCompletedTicketsEntry_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["T-800"],
+      targetWork: ["TEST-T-800"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "T-800", kind: "ticket", status: "complete" }],
-      commits: [{ id: "T-800", kind: "ticket", reachable: true }],
+      onDisk: [{ id: "TEST-T-800", kind: "ticket", status: "complete" }],
+      commits: [{ id: "TEST-T-800", kind: "ticket", reachable: true }],
       skipCompletedTicketsEntry: true,
     }));
 
@@ -440,10 +440,10 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 7. Regression: issue must have a matching commit event.
   it("preservesSessionWithNoEventForIssueTarget_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-900"],
+      targetWork: ["TEST-ISS-900"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-900", kind: "issue", status: "resolved" }],
+      onDisk: [{ id: "TEST-ISS-900", kind: "issue", status: "resolved" }],
       commits: [], // no commit event emitted
     }));
 
@@ -458,11 +458,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 8. 60-minute lease buffer enforced.
   it("respectsLeaseBuffer_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1000"],
+      targetWork: ["TEST-ISS-1000"],
       leaseMinutesAgo: 30,
       compactPending: true,
-      onDisk: [{ id: "ISS-1000", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-1000", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-1000", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-1000", kind: "issue", reachable: true }],
     }));
 
     const result = await handleAutonomousGuide(fix.root, { action: "start", sessionId: null });
@@ -476,11 +476,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 9. Invalid lease string fails closed.
   it("failsClosedOnInvalidLeaseTimestamp_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1100"],
+      targetWork: ["TEST-ISS-1100"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-1100", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-1100", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-1100", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-1100", kind: "issue", reachable: true }],
       invalidLeaseString: "not a date",
     }));
 
@@ -513,16 +513,16 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 11. Structured event + stderr line appear on the happy path.
   it("supersedeWritesStderrAndEvent", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1200", "T-1200"],
+      targetWork: ["TEST-ISS-1200", "TEST-T-1200"],
       leaseMinutesAgo: 90,
       compactPending: true,
       onDisk: [
-        { id: "ISS-1200", kind: "issue", status: "resolved" },
-        { id: "T-1200", kind: "ticket", status: "complete" },
+        { id: "TEST-ISS-1200", kind: "issue", status: "resolved" },
+        { id: "TEST-T-1200", kind: "ticket", status: "complete" },
       ],
       commits: [
-        { id: "ISS-1200", kind: "issue", reachable: true },
-        { id: "T-1200", kind: "ticket", reachable: true },
+        { id: "TEST-ISS-1200", kind: "issue", reachable: true },
+        { id: "TEST-T-1200", kind: "ticket", reachable: true },
       ],
     }));
 
@@ -531,7 +531,7 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
     const all = stderrWrites.join("");
     expect(all).toContain("[T-250] auto-superseded finished-orphan session");
     expect(all).toContain(fix.sessionId);
-    expect(all).toContain("targets=ISS-1200,T-1200");
+    expect(all).toContain("targets=TEST-ISS-1200,TEST-T-1200");
     expect(all).toMatch(/leaseExpiredMinutesAgo=\d+/);
 
     const { events } = readEvents(fix.sessionDir);
@@ -539,7 +539,7 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
     expect(audit).toBeDefined();
     const data = audit!.data as { reason: string; targetWork: string[]; leaseExpiredMinutesAgo: number };
     expect(data.reason).toBe("finished_orphan");
-    expect(data.targetWork).toEqual(["ISS-1200", "T-1200"]);
+    expect(data.targetWork).toEqual(["TEST-ISS-1200", "TEST-T-1200"]);
     // ISS-389: Number.isFinite over typeof to actually reject NaN/Infinity.
     expect(Number.isFinite(data.leaseExpiredMinutesAgo)).toBe(true);
   });
@@ -547,11 +547,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 12. Schema round-trip: readSession parses the new enum cleanly.
   it("readSessionRoundTripsSupersededState", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1300"],
+      targetWork: ["TEST-ISS-1300"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-1300", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-1300", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-1300", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-1300", kind: "issue", reachable: true }],
     }));
 
     await handleAutonomousGuide(fix.root, { action: "start", sessionId: null });
@@ -570,10 +570,10 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 13. Stale-loop branch: failing orphan check still triggers generic supersede.
   it("staleBranchFailingCheckStillGenericSupersedes", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1400"],
+      targetWork: ["TEST-ISS-1400"],
       leaseMinutesAgo: 90,
       compactPending: false,
-      onDisk: [{ id: "ISS-1400", kind: "issue", status: "open" }],
+      onDisk: [{ id: "TEST-ISS-1400", kind: "issue", status: "open" }],
       commits: [],
     }));
 
@@ -594,11 +594,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 14. Stale-loop branch: orphan pass wins over the generic pass.
   it("staleBranchFinishedOrphanUpgradesReason", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1500"],
+      targetWork: ["TEST-ISS-1500"],
       leaseMinutesAgo: 90,
       compactPending: false,
-      onDisk: [{ id: "ISS-1500", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-1500", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-1500", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-1500", kind: "issue", reachable: true }],
     }));
 
     await handleAutonomousGuide(fix.root, { action: "start", sessionId: null });
@@ -612,11 +612,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 15. Non-auto modes (review/plan/guided) must never be silently superseded.
   it("nonAutoModeNotEligible_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1600"],
+      targetWork: ["TEST-ISS-1600"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-1600", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-1600", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-1600", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-1600", kind: "issue", reachable: true }],
       mode: "guided",
     }));
 
@@ -632,11 +632,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 16. Garbage line in events.log → malformedCount > 0 → fail closed.
   it("failsClosedOnMalformedEventsLog_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1700"],
+      targetWork: ["TEST-ISS-1700"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-1700", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-1700", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-1700", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-1700", kind: "issue", reachable: true }],
       corruptEventsLog: "garbage_line",
     }));
 
@@ -652,11 +652,11 @@ describe("T-250 auto-supersede finished orphan sessions", () => {
   // 17. Commit event with non-string commitHash → fail closed.
   it("failsClosedOnInvalidCommitShape_compactBranch", async () => {
     const fix = track(buildFixture({
-      targetWork: ["ISS-1800"],
+      targetWork: ["TEST-ISS-1800"],
       leaseMinutesAgo: 120,
       compactPending: true,
-      onDisk: [{ id: "ISS-1800", kind: "issue", status: "resolved" }],
-      commits: [{ id: "ISS-1800", kind: "issue", reachable: true }],
+      onDisk: [{ id: "TEST-ISS-1800", kind: "issue", status: "resolved" }],
+      commits: [{ id: "TEST-ISS-1800", kind: "issue", reachable: true }],
       corruptEventsLog: "invalid_commit_shape",
     }));
 

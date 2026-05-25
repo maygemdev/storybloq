@@ -19,7 +19,7 @@ describe("handleValidate", () => {
   it("returns OK when validation passes", () => {
     const ctx = makeCtx({
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
@@ -31,7 +31,7 @@ describe("handleValidate", () => {
   it("returns VALIDATION_ERROR when validation fails", () => {
     const ctx = makeCtx({
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "nonexistent" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "nonexistent" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });

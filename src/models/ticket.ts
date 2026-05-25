@@ -6,8 +6,8 @@ import {
   TicketIdSchema,
 } from "./types.js";
 
-export const CROSS_NODE_REF_REGEX = /^[a-z][a-z0-9_-]{0,63}:(T-\d+[a-z]?|ISS-\d+)$/;
-export const CROSS_NODE_REF_CAPTURE_REGEX = /^([a-z][a-z0-9_-]{0,63}):(T-\d+[a-z]?|ISS-\d+)$/;
+export const CROSS_NODE_REF_REGEX = /^[a-z][a-z0-9_-]{0,63}:([A-Z0-9]{3,12}-T-\d+[a-z]?|[A-Z0-9]{3,12}-ISS-\d+)$/;
+export const CROSS_NODE_REF_CAPTURE_REGEX = /^([a-z][a-z0-9_-]{0,63}):([A-Z0-9]{3,12}-T-\d+[a-z]?|[A-Z0-9]{3,12}-ISS-\d+)$/;
 
 export const TicketSchema = z
   .object({

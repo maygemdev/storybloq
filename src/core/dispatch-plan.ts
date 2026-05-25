@@ -1,4 +1,5 @@
 import type { Recommendation } from "./recommend.js";
+import { TICKET_ID_REGEX, ISSUE_ID_REGEX } from "../models/types.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,7 +58,7 @@ function isDispatchableKind(kind: string): kind is "ticket" | "issue" {
 
 function normalizeId(id: string): string {
   const upper = id.toUpperCase();
-  const match = upper.match(/^(T-\d+)([A-Z]?)$/);
+  const match = upper.match(/^([A-Z0-9]{3,12}-T-\d+)([A-Z]?)$/);
   if (match && match[2]) return match[1] + match[2].toLowerCase();
   return upper;
 }
@@ -115,10 +116,10 @@ export function buildDispatchPlan(
             reason: rec.reason,
           });
         }
-      } else if (/^(T-\d+[a-z]?|ISS-\d+)$/i.test(id)) {
+      } else if (TICKET_ID_REGEX.test(normalized) || ISSUE_ID_REGEX.test(normalized)) {
         targets.push({
           id: normalized,
-          kind: normalized.startsWith("ISS-") ? "issue" : "ticket",
+          kind: normalized.includes("-ISS-") ? "issue" : "ticket",
           title: lookupTitle?.(normalized) ?? "",
           reason: "explicitly requested",
         });

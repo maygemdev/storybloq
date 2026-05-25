@@ -11,7 +11,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
   return {
     schemaVersion: 1, sessionId: "00000000-0000-0000-0000-000000000001",
     recipe: "coding", state: "LESSON_CAPTURE", revision: 1, status: "active",
-    reviews: { plan: [], code: [] }, completedTickets: [{ id: "T-001" }],
+    reviews: { plan: [], code: [] }, completedTickets: [{ id: "TEST-T-001" }],
     finalizeCheckpoint: null,
     git: { branch: "main", mergeBase: "abc123", expectedHead: "abc123" },
     lease: { workspaceId: "test", lastHeartbeat: now, expiresAt: now },
@@ -86,7 +86,7 @@ describe("LessonCaptureStage", () => {
 
   it("enter() includes ticket count in instruction", async () => {
     const state = makeState({
-      completedTickets: [{ id: "T-001" }, { id: "T-002" }, { id: "T-003" }],
+      completedTickets: [{ id: "TEST-T-001" }, { id: "TEST-T-002" }, { id: "TEST-T-003" }],
       reviews: { plan: [{ round: 1, reviewer: "codex", verdict: "approve", findingCount: 1, criticalCount: 0, majorCount: 0, suggestionCount: 1, timestamp: new Date().toISOString() }], code: [] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());

@@ -6,11 +6,11 @@ import { IssueSchema } from "../../src/models/issue.js";
 describe("IssueSchema", () => {
   describe("valid issues", () => {
     it("parses a resolved issue with all fields", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/issues/ISS-001.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/issues/TEST-ISS-001.json"));
       const result = IssueSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
-        expect(result.data.id).toBe("ISS-001");
+        expect(result.data.id).toBe("TEST-ISS-001");
         expect(result.data.status).toBe("resolved");
         expect(result.data.resolution).toBe("Updated engines field to require Node 20+.");
         expect(result.data.resolvedDate).toBe("2026-01-03");
@@ -18,7 +18,7 @@ describe("IssueSchema", () => {
     });
 
     it("parses an open issue with optional order and phase", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/issues/ISS-002.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/issues/TEST-ISS-002.json"));
       const result = IssueSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -30,7 +30,7 @@ describe("IssueSchema", () => {
     });
 
     it("parses an issue with optional fields absent", () => {
-      const data = readJson(resolve(fixturesDir, "valid/basic/issues/ISS-001.json"));
+      const data = readJson(resolve(fixturesDir, "valid/basic/issues/TEST-ISS-001.json"));
       const result = IssueSchema.safeParse(data);
       expect(result.success).toBe(true);
       if (result.success) {
@@ -41,7 +41,7 @@ describe("IssueSchema", () => {
 
     it("parses critical severity", () => {
       const data = {
-        id: "ISS-099", title: "Critical issue", status: "open", severity: "critical",
+        id: "TEST-ISS-099", title: "Critical issue", status: "open", severity: "critical",
         components: ["core"], impact: "System down.", resolution: null,
         location: ["main.ts:1"], discoveredDate: "2026-01-01", resolvedDate: null,
         relatedTickets: [],
@@ -54,7 +54,7 @@ describe("IssueSchema", () => {
     });
 
     it("parses all valid fixture issues", () => {
-      for (const file of ["ISS-001.json", "ISS-002.json"]) {
+      for (const file of ["TEST-ISS-001.json", "TEST-ISS-002.json"]) {
         const data = readJson(resolve(fixturesDir, `valid/basic/issues/${file}`));
         expect(IssueSchema.safeParse(data).success, `Failed to parse ${file}`).toBe(true);
       }
@@ -78,7 +78,7 @@ describe("IssueSchema", () => {
 
     it("rejects an issue with missing required field", () => {
       const data = {
-        id: "ISS-100", title: "Missing impact", status: "open", severity: "low",
+        id: "TEST-ISS-100", title: "Missing impact", status: "open", severity: "low",
         components: [], resolution: null, location: [],
         discoveredDate: "2026-01-01", resolvedDate: null, relatedTickets: [],
       };
@@ -87,7 +87,7 @@ describe("IssueSchema", () => {
 
     it("rejects an issue with invalid relatedTickets format", () => {
       const data = {
-        id: "ISS-101", title: "Bad related", status: "open", severity: "low",
+        id: "TEST-ISS-101", title: "Bad related", status: "open", severity: "low",
         components: [], impact: "Bad ref.", resolution: null, location: [],
         discoveredDate: "2026-01-01", resolvedDate: null, relatedTickets: ["not-a-ticket-id"],
       };
@@ -98,7 +98,7 @@ describe("IssueSchema", () => {
   describe("round-trip unknown key preservation", () => {
     it("preserves unknown extra keys through parse and serialize", () => {
       const data = {
-        id: "ISS-050", title: "Issue with extras", status: "open", severity: "low",
+        id: "TEST-ISS-050", title: "Issue with extras", status: "open", severity: "low",
         components: ["test"], impact: "None.", resolution: null, location: ["file.ts:1"],
         discoveredDate: "2026-01-01", resolvedDate: null, relatedTickets: [],
         extraField: "preserved", extraNumber: 99,

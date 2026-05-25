@@ -31,10 +31,10 @@ describe("formatCompactReport", () => {
   it("produces duration, ticket count, issue count, review stats", () => {
     const state = makeState({
       completedTickets: [
-        { id: "T-001", title: "First", commitHash: "aaa" },
-        { id: "T-002", title: "Second", commitHash: "bbb" },
+        { id: "TEST-T-001", title: "First", commitHash: "aaa" },
+        { id: "TEST-T-002", title: "Second", commitHash: "bbb" },
       ],
-      resolvedIssues: ["ISS-001"],
+      resolvedIssues: ["TEST-ISS-001"],
       reviews: {
         plan: [{ round: 1, reviewer: "codex", verdict: "approve", findingCount: 3, criticalCount: 0, majorCount: 1, suggestionCount: 2, timestamp: new Date().toISOString() }],
         code: [{ round: 1, reviewer: "agent", verdict: "approve", findingCount: 5, criticalCount: 1, majorCount: 2, suggestionCount: 2, timestamp: new Date().toISOString() }],
@@ -48,14 +48,14 @@ describe("formatCompactReport", () => {
     expect(report).toContain("**Issues:** 1");
     expect(report).toContain("**Reviews:** 2 rounds (8 findings)");
     expect(report).toContain("**Compactions:** 3");
-    expect(report).toContain("T-001");
-    expect(report).toContain("T-002");
+    expect(report).toContain("TEST-T-001");
+    expect(report).toContain("TEST-T-002");
   });
 
   it("includes per-ticket timing when available (T-187)", () => {
     const state = makeState({
       completedTickets: [
-        { id: "T-001", title: "Timed", commitHash: "aaa",
+        { id: "TEST-T-001", title: "Timed", commitHash: "aaa",
           startedAt: "2026-04-04T10:00:00.000Z",
           completedAt: "2026-04-04T10:30:00.000Z" },
       ],
@@ -71,15 +71,15 @@ describe("formatCompactReport", () => {
     const data: CompactReportData = {
       state,
       remainingWork: {
-        tickets: [{ id: "T-010", title: "Next task" }],
-        issues: [{ id: "ISS-005", title: "Bug fix", severity: "high" }],
+        tickets: [{ id: "TEST-T-010", title: "Next task" }],
+        issues: [{ id: "TEST-ISS-005", title: "Bug fix", severity: "high" }],
       },
     };
 
     const report = formatCompactReport(data);
     expect(report).toContain("### What's Left");
-    expect(report).toContain("T-010: Next task");
-    expect(report).toContain("ISS-005: Bug fix (high)");
+    expect(report).toContain("TEST-T-010: Next task");
+    expect(report).toContain("TEST-ISS-005: Bug fix (high)");
   });
 
   it("handles empty session (0 tickets, 0 issues)", () => {
@@ -104,12 +104,12 @@ describe("formatCompactReport", () => {
   it("handles tickets without timing data gracefully", () => {
     const state = makeState({
       completedTickets: [
-        { id: "T-001", title: "No timing", commitHash: "aaa" },
+        { id: "TEST-T-001", title: "No timing", commitHash: "aaa" },
       ],
     });
 
     const report = formatCompactReport({ state });
-    expect(report).toContain("T-001");
+    expect(report).toContain("TEST-T-001");
     expect(report).toContain("--"); // no duration
     expect(report).not.toContain("**Avg time per ticket:**");
   });

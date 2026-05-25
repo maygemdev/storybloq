@@ -79,7 +79,7 @@ function baseState(overrides: Record<string, unknown> = {}): Record<string, unkn
 
 function validLensEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
-    ticketId: "T-001",
+    ticketId: "TEST-T-001",
     stage: "CODE_REVIEW",
     lens: "security",
     category: "hardcoded-secret",
@@ -100,7 +100,7 @@ function writeStateFile(dir: string, state: Record<string, unknown>): void {
 // 1. MCP input schema — disposition enum rejects unknown values
 // ---------------------------------------------------------------------------
 
-describe("ISS-556 Layer 1: disposition enum at input boundary", () => {
+describe("TEST-ISS-556 Layer 1: disposition enum at input boundary", () => {
   it("LENS_FINDING_DISPOSITIONS contains exactly the four canonical values", () => {
     expect([...LENS_FINDING_DISPOSITIONS].sort()).toEqual(
       ["addressed", "contested", "deferred", "open"],
@@ -133,12 +133,12 @@ describe("ISS-556 Layer 1: disposition enum at input boundary", () => {
 // 2-4. buildLensHistoryUpdate normalization
 // ---------------------------------------------------------------------------
 
-describe("ISS-556 Layer 1b: buildLensHistoryUpdate normalization", () => {
+describe("TEST-ISS-556 Layer 1b: buildLensHistoryUpdate normalization", () => {
   it("normalizes unknown disposition strings to 'open'", () => {
     const updated = buildLensHistoryUpdate(
       [{ category: "cat-a", severity: "high", description: "d", disposition: "fixed", lens: "security" }],
       [],
-      "T-001",
+      "TEST-T-001",
       "CODE_REVIEW",
     );
     expect(updated).not.toBeNull();
@@ -150,7 +150,7 @@ describe("ISS-556 Layer 1b: buildLensHistoryUpdate normalization", () => {
       const updated = buildLensHistoryUpdate(
         [{ category: `cat-${d}`, severity: "high", description: "d", disposition: d, lens: "security" }],
         [],
-        "T-001",
+        "TEST-T-001",
         "CODE_REVIEW",
       );
       expect(updated).not.toBeNull();
@@ -162,7 +162,7 @@ describe("ISS-556 Layer 1b: buildLensHistoryUpdate normalization", () => {
     const updated = buildLensHistoryUpdate(
       [{ category: "cat-a", severity: "high", description: "d", lens: "security" }],
       [],
-      "T-001",
+      "TEST-T-001",
       "CODE_REVIEW",
     );
     expect(updated).not.toBeNull();
@@ -174,7 +174,7 @@ describe("ISS-556 Layer 1b: buildLensHistoryUpdate normalization", () => {
 // 5-9. readSession vs readSessionResilient
 // ---------------------------------------------------------------------------
 
-describe("ISS-556 Layer 2: readSessionResilient disposition-only recovery", () => {
+describe("TEST-ISS-556 Layer 2: readSessionResilient disposition-only recovery", () => {
   it("strict readSession returns null when a disposition is outside the enum", () => {
     const dir = makeSessionDir();
     writeStateFile(
@@ -279,7 +279,7 @@ describe("ISS-556 Layer 2: readSessionResilient disposition-only recovery", () =
 // 10. Round-trip invariant
 // ---------------------------------------------------------------------------
 
-describe("ISS-556 round-trip", () => {
+describe("TEST-ISS-556 round-trip", () => {
   it("valid dispositions survive write → read unchanged", () => {
     const dir = makeSessionDir();
     // Seed a valid state via writeStateFile so writeSessionSync has something to increment.

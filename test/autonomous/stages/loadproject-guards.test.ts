@@ -39,7 +39,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
     compactPending: false, compactPreparedAt: null, resumeBlocked: false,
     terminationReason: null, waitingForRetry: false, lastGuideCall: now, startedAt: now, guideCallCount: 5,
     config: { maxTicketsPerSession: 5, compactThreshold: "high", reviewBackends: ["codex", "agent"], handoverInterval: 3 },
-    ticket: { id: "T-001", title: "Test ticket", claimed: true, risk: "low" },
+    ticket: { id: "TEST-T-001", title: "Test ticket", claimed: true, risk: "low" },
     filedDeferrals: [], pendingDeferrals: [], deferralsUnfiled: false,
     resolvedIssues: [], currentIssue: null,
     targetWork: [],
@@ -88,7 +88,7 @@ afterEach(() => { rmSync(testRoot, { recursive: true, force: true }); });
 // ISS-089: PickTicketStage.enter() loadProject guard
 // ---------------------------------------------------------------------------
 
-describe("ISS-089: PickTicketStage.enter() with throwing loadProject", () => {
+describe("TEST-ISS-089: PickTicketStage.enter() with throwing loadProject", () => {
   it("returns retry with error message instead of crashing", async () => {
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
@@ -104,12 +104,12 @@ describe("ISS-089: PickTicketStage.enter() with throwing loadProject", () => {
 // ISS-089: PickTicketStage.report() loadProject guard (ticket_picked)
 // ---------------------------------------------------------------------------
 
-describe("ISS-089: PickTicketStage.report() with throwing loadProject", () => {
+describe("TEST-ISS-089: PickTicketStage.report() with throwing loadProject", () => {
   it("returns retry when validating a ticket pick", async () => {
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
     const ctx = new ThrowingCtx(testRoot, sessionDir, makeState(), makeRecipe());
-    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-001" });
+    const result = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-001" });
     expect(result).toHaveProperty("action", "retry");
     expect((result as { instruction: string }).instruction).toContain("Failed to load project state");
   });
@@ -118,7 +118,7 @@ describe("ISS-089: PickTicketStage.report() with throwing loadProject", () => {
     const { PickTicketStage } = await import("../../../src/autonomous/stages/pick-ticket.js");
     const stage = new PickTicketStage();
     const ctx = new ThrowingCtx(testRoot, sessionDir, makeState(), makeRecipe());
-    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "ISS-001" });
+    const result = await stage.report(ctx, { completedAction: "issue_picked", issueId: "TEST-ISS-001" });
     expect(result).toHaveProperty("action", "retry");
     expect((result as { instruction: string }).instruction).toContain("Failed to load project state");
   });
@@ -128,7 +128,7 @@ describe("ISS-089: PickTicketStage.report() with throwing loadProject", () => {
 // ISS-089: CompleteStage.enter() loadProject guard
 // ---------------------------------------------------------------------------
 
-describe("ISS-089: CompleteStage.enter() with throwing loadProject", () => {
+describe("TEST-ISS-089: CompleteStage.enter() with throwing loadProject", () => {
   it("routes to HANDOVER with error note instead of crashing", async () => {
     const { CompleteStage } = await import("../../../src/autonomous/stages/complete.js");
     const stage = new CompleteStage();
@@ -145,20 +145,20 @@ describe("ISS-089: CompleteStage.enter() with throwing loadProject", () => {
 // ISS-089: IssueFixStage.enter() loadProject guard
 // ---------------------------------------------------------------------------
 
-describe("ISS-089: IssueFixStage.enter() with throwing loadProject", () => {
+describe("TEST-ISS-089: IssueFixStage.enter() with throwing loadProject", () => {
   it("falls back to minimal info from session state", async () => {
     const { IssueFixStage } = await import("../../../src/autonomous/stages/issue-fix.js");
     const stage = new IssueFixStage();
     const state = makeState({
       state: "ISSUE_FIX",
-      currentIssue: { id: "ISS-001", title: "Test issue", severity: "high" },
+      currentIssue: { id: "TEST-ISS-001", title: "Test issue", severity: "high" },
     });
     const ctx = new ThrowingCtx(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     // Should NOT crash, should return instruction with fallback info
     expect(result).not.toHaveProperty("action"); // StageResult (no action = instruction)
     const r = result as { instruction: string };
-    expect(r.instruction).toContain("ISS-001");
+    expect(r.instruction).toContain("TEST-ISS-001");
     expect(r.instruction).toContain("could not load full issue details");
   });
 });
@@ -167,13 +167,13 @@ describe("ISS-089: IssueFixStage.enter() with throwing loadProject", () => {
 // ISS-089: IssueFixStage.report() loadProject guard
 // ---------------------------------------------------------------------------
 
-describe("ISS-089: IssueFixStage.report() with throwing loadProject", () => {
+describe("TEST-ISS-089: IssueFixStage.report() with throwing loadProject", () => {
   it("returns retry with error message", async () => {
     const { IssueFixStage } = await import("../../../src/autonomous/stages/issue-fix.js");
     const stage = new IssueFixStage();
     const state = makeState({
       state: "ISSUE_FIX",
-      currentIssue: { id: "ISS-001", title: "Test issue", severity: "high" },
+      currentIssue: { id: "TEST-ISS-001", title: "Test issue", severity: "high" },
     });
     const ctx = new ThrowingCtx(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.report(ctx, { completedAction: "issue_fixed" });
@@ -186,7 +186,7 @@ describe("ISS-089: IssueFixStage.report() with throwing loadProject", () => {
 // ISS-089: IssueSweepStage.enter() loadProject guard
 // ---------------------------------------------------------------------------
 
-describe("ISS-089: IssueSweepStage.enter() with throwing loadProject", () => {
+describe("TEST-ISS-089: IssueSweepStage.enter() with throwing loadProject", () => {
   it("skips sweep and goes to HANDOVER", async () => {
     const { IssueSweepStage } = await import("../../../src/autonomous/stages/issue-sweep.js");
     const stage = new IssueSweepStage();
@@ -201,13 +201,13 @@ describe("ISS-089: IssueSweepStage.enter() with throwing loadProject", () => {
 // ISS-089: IssueSweepStage.report() loadProject guard (verify current issue)
 // ---------------------------------------------------------------------------
 
-describe("ISS-089: IssueSweepStage.report() with throwing loadProject", () => {
+describe("TEST-ISS-089: IssueSweepStage.report() with throwing loadProject", () => {
   it("returns retry when verifying current issue resolution", async () => {
     const { IssueSweepStage } = await import("../../../src/autonomous/stages/issue-sweep.js");
     const stage = new IssueSweepStage();
     const state = makeState({
       state: "ISSUE_SWEEP",
-      issueSweepState: { remaining: ["ISS-001", "ISS-002"], current: "ISS-001", resolved: [] },
+      issueSweepState: { remaining: ["TEST-ISS-001", "TEST-ISS-002"], current: "TEST-ISS-001", resolved: [] },
     });
     const ctx = new ThrowingCtx(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.report(ctx, { completedAction: "issue_fixed" });
@@ -220,7 +220,7 @@ describe("ISS-089: IssueSweepStage.report() with throwing loadProject", () => {
 // ISS-098: nextReviewer with codexUnavailable=true
 // ---------------------------------------------------------------------------
 
-describe("ISS-098: nextReviewer with codexUnavailable", () => {
+describe("TEST-ISS-098: nextReviewer with codexUnavailable", () => {
   it("filters codex from backends when codexUnavailable is true", async () => {
     const { nextReviewer } = await import("../../../src/autonomous/review-depth.js");
 
@@ -255,7 +255,7 @@ describe("ISS-098: nextReviewer with codexUnavailable", () => {
 // ISS-110: codexUnavailableSince timestamp-based TTL
 // ---------------------------------------------------------------------------
 
-describe("ISS-110: codexUnavailableSince TTL", () => {
+describe("TEST-ISS-110: codexUnavailableSince TTL", () => {
   it("filters codex when timestamp is recent", async () => {
     const { nextReviewer, isCodexUnavailable } = await import("../../../src/autonomous/review-depth.js");
     const recent = new Date().toISOString();

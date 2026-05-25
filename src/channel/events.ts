@@ -5,11 +5,12 @@
  * via the file-based IPC inbox (.story/channel-inbox/).
  */
 import { z } from "zod";
+import { TICKET_ID_REGEX } from "../models/types.js";
 
 // MARK: - Event Schemas
 
 const TicketRequestedPayload = z.object({
-  ticketId: z.string().regex(/^T-\d+[a-z]?$/),
+  ticketId: z.string().regex(TICKET_ID_REGEX),
 });
 
 const PauseSessionPayload = z.object({});
@@ -21,7 +22,7 @@ const CancelSessionPayload = z.object({
 });
 
 const PriorityChangedPayload = z.object({
-  ticketId: z.string().regex(/^T-\d+[a-z]?$/),
+  ticketId: z.string().regex(TICKET_ID_REGEX),
   newOrder: z.number().int(),
 });
 

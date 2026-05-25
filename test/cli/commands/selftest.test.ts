@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { handleSelftest } from "../../../src/cli/commands/selftest.js";
 import { initProject } from "../../../src/core/init.js";
+import { setTestNamespace } from "../../helpers.js";
 
 describe("handleSelftest", () => {
   const tmpDirs: string[] = [];
@@ -16,6 +17,7 @@ describe("handleSelftest", () => {
     const dir = await mkdtemp(join(tmpdir(), "selftest-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleSelftest(dir, "md");
     expect(result.output).toContain("18/18 passed");
     expect(result.output).not.toContain("[ ]");
@@ -25,6 +27,7 @@ describe("handleSelftest", () => {
     const dir = await mkdtemp(join(tmpdir(), "selftest-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handleSelftest(dir, "json");
     const parsed = JSON.parse(result.output);
     expect(parsed.data.passed).toBe(18);
@@ -38,6 +41,7 @@ describe("handleSelftest", () => {
     const dir = await mkdtemp(join(tmpdir(), "selftest-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
 
     // Should throw due to failAfter, but cleanup should remove created entities
     await expect(handleSelftest(dir, "md", 3)).rejects.toThrow("failAfter");
@@ -55,6 +59,7 @@ describe("handleSelftest", () => {
     const dir = await mkdtemp(join(tmpdir(), "selftest-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleSelftest(dir, "md");
 
     const ticketFiles = await readdir(join(dir, ".story", "tickets")).catch(() => []);

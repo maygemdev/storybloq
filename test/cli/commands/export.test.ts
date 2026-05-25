@@ -42,17 +42,17 @@ describe("export command", () => {
 
     it("returns output for valid phase", () => {
       const ctx = makeCtx({
-        tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const result = handleExport(ctx, "phase", "p1");
       expect(result.output).toContain("p1");
-      expect(result.output).toContain("T-001");
+      expect(result.output).toContain("TEST-T-001");
     });
 
     it("returns output for --all", () => {
       const ctx = makeCtx({
-        tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const result = handleExport(ctx, "all", null);
@@ -66,58 +66,58 @@ describe("formatExport", () => {
     it("MD includes phase name and tickets", () => {
       const state = makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", status: "complete", title: "Done" }),
-          makeTicket({ id: "T-002", phase: "p1", status: "open", title: "Todo" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete", title: "Done" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", status: "open", title: "Todo" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1", name: "Core" })]),
       });
       const md = formatExport(state, "phase", "p1", "md");
       expect(md).toContain("Core (p1)");
-      expect(md).toContain("[x] T-001: Done");
-      expect(md).toContain("[ ] T-002: Todo");
+      expect(md).toContain("[x] TEST-T-001: Done");
+      expect(md).toContain("[ ] TEST-T-002: Todo");
     });
 
     it("MD includes umbrella ancestors as context", () => {
       const state = makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", title: "Umbrella" }),
-          makeTicket({ id: "T-002", phase: "p1", parentTicket: "T-001", title: "Child" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", title: "Umbrella" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", parentTicket: "TEST-T-001", title: "Child" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const md = formatExport(state, "phase", "p1", "md");
-      expect(md).toContain("T-002: Child");
-      expect(md).toContain("under T-001");
+      expect(md).toContain("TEST-T-002: Child");
+      expect(md).toContain("under TEST-T-001");
     });
 
     it("MD includes cross-phase dependencies", () => {
       const state = makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", blockedBy: ["T-002"] }),
-          makeTicket({ id: "T-002", phase: "p2", title: "Blocker in p2" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", blockedBy: ["TEST-T-002"] }),
+          makeTicket({ id: "TEST-T-002", phase: "p2", title: "Blocker in p2" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" }), makePhase({ id: "p2" })]),
       });
       const md = formatExport(state, "phase", "p1", "md");
       expect(md).toContain("Cross-Phase Dependencies");
-      expect(md).toContain("T-002");
+      expect(md).toContain("TEST-T-002");
       expect(md).toContain("Blocker in p2");
     });
 
     it("MD includes related issues", () => {
       const state = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1" })],
-        issues: [makeIssue({ id: "ISS-001", phase: "p1", title: "Bug in p1" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
+        issues: [makeIssue({ id: "TEST-ISS-001", phase: "p1", title: "Bug in p1" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const md = formatExport(state, "phase", "p1", "md");
       expect(md).toContain("Open Issues");
-      expect(md).toContain("ISS-001");
+      expect(md).toContain("TEST-ISS-001");
     });
 
     it("JSON is valid and includes phase data", () => {
       const state = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
         roadmap: makeRoadmap([makePhase({ id: "p1", name: "Core" })]),
       });
       const json = formatExport(state, "phase", "p1", "json");
@@ -132,15 +132,15 @@ describe("formatExport", () => {
     it("MD includes all phases and tickets", () => {
       const state = makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", status: "complete" }),
-          makeTicket({ id: "T-002", phase: "p2", status: "open" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" }),
+          makeTicket({ id: "TEST-T-002", phase: "p2", status: "open" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" }), makePhase({ id: "p2" })]),
       });
       const md = formatExport(state, "all", null, "md");
       expect(md).toContain("Full Export");
-      expect(md).toContain("T-001");
-      expect(md).toContain("T-002");
+      expect(md).toContain("TEST-T-001");
+      expect(md).toContain("TEST-T-002");
       expect(md).toContain("p1");
       expect(md).toContain("p2");
     });
@@ -148,8 +148,8 @@ describe("formatExport", () => {
     it("MD includes issues grouped by severity", () => {
       const state = makeState({
         issues: [
-          makeIssue({ id: "ISS-001", severity: "critical" }),
-          makeIssue({ id: "ISS-002", severity: "low" }),
+          makeIssue({ id: "TEST-ISS-001", severity: "critical" }),
+          makeIssue({ id: "TEST-ISS-002", severity: "low" }),
         ],
       });
       const md = formatExport(state, "all", null, "md");
@@ -177,8 +177,8 @@ describe("formatExport", () => {
     it("MD shows ticket counts", () => {
       const state = makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", status: "complete" }),
-          makeTicket({ id: "T-002", phase: "p1", status: "open" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" }),
+          makeTicket({ id: "TEST-T-002", phase: "p1", status: "open" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
@@ -188,8 +188,8 @@ describe("formatExport", () => {
 
     it("JSON is valid with full structure", () => {
       const state = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1" })],
-        issues: [makeIssue({ id: "ISS-001" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
+        issues: [makeIssue({ id: "TEST-ISS-001" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const json = formatExport(state, "all", null, "json");
@@ -210,7 +210,7 @@ describe("formatExport", () => {
   describe("markdown escaping", () => {
     it("escapes special chars in titles", () => {
       const state = makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", title: "# Heading <script>" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", title: "# Heading <script>" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       });
       const md = formatExport(state, "phase", "p1", "md");

@@ -1,5 +1,5 @@
 {
-  "id": "T-100",
+  "id": "TEST-T-100",
   "title": "Ticket with bad status",
   "description": "Status value is not in the enum.",
   "type": "task",

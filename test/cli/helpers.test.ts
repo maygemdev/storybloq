@@ -9,15 +9,15 @@ import {
 
 describe("parseTicketId", () => {
   it("accepts valid ticket IDs", () => {
-    expect(parseTicketId("T-001")).toBe("T-001");
-    expect(parseTicketId("T-077a")).toBe("T-077a");
-    expect(parseTicketId("T-079b")).toBe("T-079b");
+    expect(parseTicketId("TEST-T-001")).toBe("TEST-T-001");
+    expect(parseTicketId("TEST-T-077a")).toBe("TEST-T-077a");
+    expect(parseTicketId("TEST-T-079b")).toBe("TEST-T-079b");
   });
 
   it("rejects invalid ticket IDs", () => {
     expect(() => parseTicketId("INVALID")).toThrow(CliValidationError);
     expect(() => parseTicketId("T001")).toThrow(CliValidationError);
-    expect(() => parseTicketId("ISS-001")).toThrow(CliValidationError);
+    expect(() => parseTicketId("TEST-ISS-001")).toThrow(CliValidationError);
     expect(() => parseTicketId("")).toThrow(CliValidationError);
   });
 
@@ -33,13 +33,13 @@ describe("parseTicketId", () => {
 
 describe("parseIssueId", () => {
   it("accepts valid issue IDs", () => {
-    expect(parseIssueId("ISS-001")).toBe("ISS-001");
-    expect(parseIssueId("ISS-999")).toBe("ISS-999");
+    expect(parseIssueId("TEST-ISS-001")).toBe("TEST-ISS-001");
+    expect(parseIssueId("TEST-ISS-999")).toBe("TEST-ISS-999");
   });
 
   it("rejects invalid issue IDs", () => {
     expect(() => parseIssueId("INVALID")).toThrow(CliValidationError);
-    expect(() => parseIssueId("T-001")).toThrow(CliValidationError);
+    expect(() => parseIssueId("TEST-T-001")).toThrow(CliValidationError);
     expect(() => parseIssueId("")).toThrow(CliValidationError);
   });
 });

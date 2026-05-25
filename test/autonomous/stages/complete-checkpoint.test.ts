@@ -16,7 +16,7 @@ function makeState(overrides: Partial<FullSessionState> = {}): FullSessionState 
   return {
     schemaVersion: 1, sessionId: "00000000-0000-0000-0000-000000000001",
     recipe: "coding", state: "COMPLETE", revision: 1, status: "active",
-    reviews: { plan: [], code: [] }, completedTickets: [{ id: "T-001" }],
+    reviews: { plan: [], code: [] }, completedTickets: [{ id: "TEST-T-001" }],
     finalizeCheckpoint: null,
     git: { branch: "main", mergeBase: "abc123", expectedHead: "abc123" },
     lease: { workspaceId: "test", lastHeartbeat: now, expiresAt: now },
@@ -56,8 +56,8 @@ describe("CompleteStage — ISS-050 regression", () => {
     writeFileSync(join(testRoot, ".story", "config.json"), JSON.stringify({ version: 1, schemaVersion: 1, project: "test", type: "npm", language: "typescript", features: { tickets: true, issues: true, handovers: true, roadmap: true, reviews: true } }));
     writeFileSync(join(testRoot, ".story", "roadmap.json"), JSON.stringify({ title: "test", date: "2026-01-01", phases: [], blockers: [] }));
     // Add an open ticket so nextTickets returns something
-    writeFileSync(join(testRoot, ".story", "tickets", "T-999.json"), JSON.stringify({
-      id: "T-999", title: "Next ticket", description: "", type: "task", status: "open",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-999.json"), JSON.stringify({
+      id: "TEST-T-999", title: "Next ticket", description: "", type: "task", status: "open",
       phase: null, order: 10, createdDate: "2026-01-01", completedDate: null, blockedBy: [],
       parentTicket: null,
     }));

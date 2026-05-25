@@ -199,7 +199,7 @@ function plantSession(root: string, opts: PlantOpts): string {
  * in events.log, expired lease, mode=auto, matching targetWork.
  */
 function plantFinishedOrphan(root: string, sessionId: string): { dir: string; commitHash: string; issueId: string } {
-  const issueId = "ISS-999";
+  const issueId = "TEST-ISS-999";
   writeIssue(root, issueId, "resolved");
   const commitHash = commitOnMain(root, "fix_iss_999");
   const dir = plantSession(root, {
@@ -247,7 +247,7 @@ function makeStdoutSink(): NodeJS.WritableStream & { captured: string[] } {
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("T-251 session list", () => {
+describe("TEST-T-251 session list", () => {
   // Test 1
   it("listShowsAllSessions: prints full UUIDs for every session across statuses", async () => {
     const root = setupRoot();
@@ -342,7 +342,7 @@ describe("T-251 session list", () => {
   });
 });
 
-describe("T-251 session show", () => {
+describe("TEST-T-251 session show", () => {
   // Test 5
   it("showDisplaysStateFields: text output contains ID, state, ticket, events", async () => {
     const root = setupRoot();
@@ -357,7 +357,7 @@ describe("T-251 session show", () => {
       rev: 1,
       type: "ticket_picked",
       timestamp: new Date().toISOString(),
-      data: { ticketId: "T-100" },
+      data: { ticketId: "TEST-T-100" },
     });
 
     const out = await handleSessionShow(root, id, { format: "text", events: 10 });
@@ -388,7 +388,7 @@ describe("T-251 session show", () => {
   });
 });
 
-describe("T-251 session repair", () => {
+describe("TEST-T-251 session repair", () => {
   // Test 8
   it("repairDryRunDoesNotMutate: finished-orphan fixture preserved under dry-run", async () => {
     const root = setupRoot({ initGit: true });
@@ -425,13 +425,13 @@ describe("T-251 session repair", () => {
   it("repairLeavesStaleOtherAloneWithoutAllFlag: non-orphan stale session needs --all", async () => {
     const root = setupRoot();
     const id = "cccc0003-0000-0000-0000-000000000001";
-    writeTicket(root, "T-500", "open"); // not complete → not an orphan
+    writeTicket(root, "TEST-T-500", "open"); // not complete → not an orphan
     const dir = plantSession(root, {
       sessionId: id,
       status: "active",
       leaseMinutesAgo: 120,
       mode: "auto",
-      targetWork: ["T-500"],
+      targetWork: ["TEST-T-500"],
     });
     const revBefore = readSession(dir)!.revision;
 
@@ -524,13 +524,13 @@ describe("T-251 session repair", () => {
   it("repairPositionalStaleOtherRequiresAll: positional does not bypass bucket gate", async () => {
     const root = setupRoot();
     const id = "cccc0007-0000-0000-0000-000000000001";
-    writeTicket(root, "T-501", "open");
+    writeTicket(root, "TEST-T-501", "open");
     const dir = plantSession(root, {
       sessionId: id,
       status: "active",
       leaseMinutesAgo: 120,
       mode: "auto",
-      targetWork: ["T-501"],
+      targetWork: ["TEST-T-501"],
     });
     const revBefore = readSession(dir)!.revision;
 
@@ -561,14 +561,14 @@ describe("T-251 session repair", () => {
   // Test 15 — bulk discovery containment
   it("repairAllSkipsSymlinkEscape: repair --all drops symlink-escape candidates before write", async () => {
     const root = setupRoot();
-    writeTicket(root, "T-502", "open");
+    writeTicket(root, "TEST-T-502", "open");
     const legitId = "cccc0008-0000-0000-0000-000000000001";
     const legitDir = plantSession(root, {
       sessionId: legitId,
       status: "active",
       leaseMinutesAgo: 120,
       mode: "auto",
-      targetWork: ["T-502"],
+      targetWork: ["TEST-T-502"],
     });
 
     // Plant an outside session directory with a plausible state.
@@ -602,7 +602,7 @@ describe("T-251 session repair", () => {
   });
 });
 
-describe("T-251 session repair (interactive confirmation)", () => {
+describe("TEST-T-251 session repair (interactive confirmation)", () => {
   // Test 16
   it("repairInteractiveConfirmAccepts: TTY stdin 'y\\n' triggers supersede", async () => {
     const root = setupRoot({ initGit: true });
@@ -648,7 +648,7 @@ describe("T-251 session repair (interactive confirmation)", () => {
   });
 });
 
-describe("T-251 session delete", () => {
+describe("TEST-T-251 session delete", () => {
   // Test 18
   it("deleteRemovesDirectory: stale session, yes=true, directory gone", async () => {
     const root = setupRoot();

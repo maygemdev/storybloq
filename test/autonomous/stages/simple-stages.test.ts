@@ -105,21 +105,21 @@ describe("ImplementStage", () => {
   it("enter() returns StageResult with instruction", async () => {
     const state = makeState({
       state: "IMPLEMENT",
-      ticket: { id: "T-001", title: "Test ticket", claimed: true },
+      ticket: { id: "TEST-T-001", title: "Test ticket", claimed: true },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     expect(isStageAdvance(result)).toBe(false);
     if (!isStageAdvance(result)) {
       expect(result.instruction).toContain("Implement");
-      expect(result.instruction).toContain("T-001");
+      expect(result.instruction).toContain("TEST-T-001");
     }
   });
 
   it("report() returns plain advance (no hardcoded result)", async () => {
     const state = makeState({
       state: "IMPLEMENT",
-      ticket: { id: "T-001", title: "Test", claimed: true, risk: "low" },
+      ticket: { id: "TEST-T-001", title: "Test", claimed: true, risk: "low" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const advance = await stage.report(ctx, { completedAction: "implementation_done" });
@@ -132,7 +132,7 @@ describe("ImplementStage", () => {
   it("report() updates ticket with realizedRisk", async () => {
     const state = makeState({
       state: "IMPLEMENT",
-      ticket: { id: "T-001", title: "Test", claimed: true, risk: "low" },
+      ticket: { id: "TEST-T-001", title: "Test", claimed: true, risk: "low" },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     await stage.report(ctx, { completedAction: "implementation_done" });
@@ -164,7 +164,7 @@ describe("PlanStage", () => {
   });
 
   it("enter() returns StageResult", async () => {
-    const state = makeState({ state: "PLAN", ticket: { id: "T-001", title: "Test", claimed: true } });
+    const state = makeState({ state: "PLAN", ticket: { id: "TEST-T-001", title: "Test", claimed: true } });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     expect(isStageAdvance(result)).toBe(false);
@@ -174,7 +174,7 @@ describe("PlanStage", () => {
   });
 
   it("report() retries when plan file missing", async () => {
-    const state = makeState({ state: "PLAN", ticket: { id: "T-001", title: "Test", claimed: true } });
+    const state = makeState({ state: "PLAN", ticket: { id: "TEST-T-001", title: "Test", claimed: true } });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const advance = await stage.report(ctx, { completedAction: "plan_written" });
     expect(advance.action).toBe("retry");
@@ -184,7 +184,7 @@ describe("PlanStage", () => {
   });
 
   it("report() retries when plan file is empty", async () => {
-    const state = makeState({ state: "PLAN", ticket: { id: "T-001", title: "Test", claimed: true } });
+    const state = makeState({ state: "PLAN", ticket: { id: "TEST-T-001", title: "Test", claimed: true } });
     writeFileSync(join(sessionDir, "plan.md"), "", "utf-8");
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const advance = await stage.report(ctx, { completedAction: "plan_written" });
@@ -192,7 +192,7 @@ describe("PlanStage", () => {
   });
 
   it("report() advances with plan review instruction when plan exists", async () => {
-    const state = makeState({ state: "PLAN", ticket: { id: "T-001", title: "Test", claimed: true } });
+    const state = makeState({ state: "PLAN", ticket: { id: "TEST-T-001", title: "Test", claimed: true } });
     writeFileSync(join(sessionDir, "plan.md"), "# Implementation Plan\n\n1. Step one\n2. Step two\n", "utf-8");
     // Need .story directory for project lock
     mkdirSync(join(testRoot, ".story", "tickets"), { recursive: true });
@@ -222,7 +222,7 @@ describe("PlanStage", () => {
 
     const state = makeState({
       state: "PLAN",
-      ticket: { id: "T-001", title: "Test", claimed: true, lastPlanHash: planHash },
+      ticket: { id: "TEST-T-001", title: "Test", claimed: true, lastPlanHash: planHash },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const advance = await stage.report(ctx, { completedAction: "plan_written" });
@@ -266,7 +266,7 @@ describe("CompleteStage", () => {
   it("enter() returns StageAdvance (auto-advance), not StageResult", async () => {
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001" }],
+      completedTickets: [{ id: "TEST-T-001" }],
       config: { maxTicketsPerSession: 3, compactThreshold: "high", reviewBackends: ["codex", "agent"] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -277,7 +277,7 @@ describe("CompleteStage", () => {
   it("enter() routes to HANDOVER when no more tickets", async () => {
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001" }],
+      completedTickets: [{ id: "TEST-T-001" }],
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
@@ -291,13 +291,13 @@ describe("CompleteStage", () => {
 
   it("enter() routes to HANDOVER when ticket cap reached", async () => {
     // Create a ticket so nextTickets returns something
-    writeFileSync(join(testRoot, ".story", "tickets", "T-999.json"), JSON.stringify({
-      id: "T-999", title: "Test", description: "", type: "task", status: "open",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-999.json"), JSON.stringify({
+      id: "TEST-T-999", title: "Test", description: "", type: "task", status: "open",
       phase: null, order: 10, createdDate: "2026-01-01", completedDate: null, blockedBy: [],
     }), "utf-8");
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001" }, { id: "T-002" }, { id: "T-003" }],
+      completedTickets: [{ id: "TEST-T-001" }, { id: "TEST-T-002" }, { id: "TEST-T-003" }],
       config: { maxTicketsPerSession: 3, compactThreshold: "high", reviewBackends: ["codex", "agent"] },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -311,7 +311,7 @@ describe("CompleteStage", () => {
   });
 
   it("report() delegates to enter() logic", async () => {
-    const state = makeState({ state: "COMPLETE", completedTickets: [{ id: "T-001" }] });
+    const state = makeState({ state: "COMPLETE", completedTickets: [{ id: "TEST-T-001" }] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const advance = await stage.report(ctx, { completedAction: "acknowledged" });
     expect(advance.action).toBe("goto");
@@ -320,13 +320,13 @@ describe("CompleteStage", () => {
   // --- T-147: Periodic checkpoint handovers ---
 
   it("enter() writes checkpoint handover at handoverInterval", async () => {
-    writeFileSync(join(testRoot, ".story", "tickets", "T-999.json"), JSON.stringify({
-      id: "T-999", title: "Test", description: "", type: "task", status: "open",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-999.json"), JSON.stringify({
+      id: "TEST-T-999", title: "Test", description: "", type: "task", status: "open",
       phase: null, order: 10, createdDate: "2026-01-01", completedDate: null, blockedBy: [],
     }), "utf-8");
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001" }, { id: "T-002" }],
+      completedTickets: [{ id: "TEST-T-001" }, { id: "TEST-T-002" }],
       config: { maxTicketsPerSession: 0, compactThreshold: "high", reviewBackends: ["codex", "agent"], handoverInterval: 2 },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -342,18 +342,18 @@ describe("CompleteStage", () => {
     if (newFile) {
       const content = readFileSync(join(testRoot, ".story", "handovers", newFile), "utf-8");
       expect(content).toContain("Checkpoint");
-      expect(content).toContain("T-001");
+      expect(content).toContain("TEST-T-001");
     }
   });
 
   it("enter() skips checkpoint when handoverInterval is 0", async () => {
-    writeFileSync(join(testRoot, ".story", "tickets", "T-999.json"), JSON.stringify({
-      id: "T-999", title: "Test", description: "", type: "task", status: "open",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-999.json"), JSON.stringify({
+      id: "TEST-T-999", title: "Test", description: "", type: "task", status: "open",
       phase: null, order: 10, createdDate: "2026-01-01", completedDate: null, blockedBy: [],
     }), "utf-8");
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001" }, { id: "T-002" }],
+      completedTickets: [{ id: "TEST-T-001" }, { id: "TEST-T-002" }],
       config: { maxTicketsPerSession: 0, compactThreshold: "high", reviewBackends: ["codex", "agent"], handoverInterval: 0 },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -366,13 +366,13 @@ describe("CompleteStage", () => {
   });
 
   it("enter() skips checkpoint when ticketsDone not divisible by interval", async () => {
-    writeFileSync(join(testRoot, ".story", "tickets", "T-999.json"), JSON.stringify({
-      id: "T-999", title: "Test", description: "", type: "task", status: "open",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-999.json"), JSON.stringify({
+      id: "TEST-T-999", title: "Test", description: "", type: "task", status: "open",
       phase: null, order: 10, createdDate: "2026-01-01", completedDate: null, blockedBy: [],
     }), "utf-8");
     const state = makeState({
       state: "COMPLETE",
-      completedTickets: [{ id: "T-001" }, { id: "T-002" }, { id: "T-003" }],
+      completedTickets: [{ id: "TEST-T-001" }, { id: "TEST-T-002" }, { id: "TEST-T-003" }],
       config: { maxTicketsPerSession: 0, compactThreshold: "high", reviewBackends: ["codex", "agent"], handoverInterval: 2 },
     });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
@@ -415,7 +415,7 @@ describe("HandoverStage", () => {
   });
 
   it("enter() returns StageResult with handover instruction", async () => {
-    const state = makeState({ state: "HANDOVER", completedTickets: [{ id: "T-001" }] });
+    const state = makeState({ state: "HANDOVER", completedTickets: [{ id: "TEST-T-001" }] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const result = await stage.enter(ctx);
     expect(isStageAdvance(result)).toBe(false);
@@ -432,7 +432,7 @@ describe("HandoverStage", () => {
   });
 
   it("report() ends session when handover content provided", async () => {
-    const state = makeState({ state: "HANDOVER", completedTickets: [{ id: "T-001" }] });
+    const state = makeState({ state: "HANDOVER", completedTickets: [{ id: "TEST-T-001" }] });
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
     const advance = await stage.report(ctx, {
       completedAction: "handover_written",
@@ -488,7 +488,7 @@ describe("PickTicketStage", () => {
   it("report() retries when ticket not found", async () => {
     const state = makeState();
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
-    const advance = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-999" });
+    const advance = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-999" });
     expect(advance.action).toBe("retry");
     if (advance.action === "retry") {
       expect(advance.instruction).toContain("not found");
@@ -497,19 +497,19 @@ describe("PickTicketStage", () => {
 
   it("report() advances with PLAN instruction when ticket is valid", async () => {
     // Create a valid ticket
-    writeFileSync(join(testRoot, ".story", "tickets", "T-001.json"), JSON.stringify({
-      id: "T-001", title: "Test ticket", description: "Build something", type: "task",
+    writeFileSync(join(testRoot, ".story", "tickets", "TEST-T-001.json"), JSON.stringify({
+      id: "TEST-T-001", title: "Test ticket", description: "Build something", type: "task",
       status: "open", phase: null, order: 10, createdDate: "2026-01-01",
       completedDate: null, blockedBy: [],
     }), "utf-8");
     const state = makeState();
     const ctx = new StageContext(testRoot, sessionDir, state, makeRecipe());
-    const advance = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "T-001" });
+    const advance = await stage.report(ctx, { completedAction: "ticket_picked", ticketId: "TEST-T-001" });
     expect(advance.action).toBe("advance");
     if (advance.action === "advance" && "result" in advance && advance.result) {
-      expect(advance.result.instruction).toContain("Plan for T-001");
+      expect(advance.result.instruction).toContain("Plan for TEST-T-001");
     }
     // State should have ticket set
-    expect(ctx.state.ticket?.id).toBe("T-001");
+    expect(ctx.state.ticket?.id).toBe("TEST-T-001");
   });
 });

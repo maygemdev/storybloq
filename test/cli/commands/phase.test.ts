@@ -16,6 +16,7 @@ import { handleIssueCreate } from "../../../src/cli/commands/issue.js";
 import { ExitCode } from "../../../src/core/output-formatter.js";
 import { initProject } from "../../../src/core/init.js";
 import { makeState, makeTicket, makeRoadmap, makePhase } from "../../core/test-factories.js";
+import { setTestNamespace } from "../../helpers.js";
 import type { CommandContext } from "../../../src/cli/run.js";
 
 function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
@@ -51,7 +52,7 @@ describe("handlePhaseCurrent", () => {
   it("returns current phase when found", () => {
     const ctx = makeCtx({
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "open" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "open" })],
         roadmap: makeRoadmap([makePhase({ id: "p1", name: "Alpha" })]),
       }),
     });
@@ -63,7 +64,7 @@ describe("handlePhaseCurrent", () => {
   it("returns exit 0 when all phases complete", () => {
     const ctx = makeCtx({
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
@@ -87,7 +88,7 @@ describe("handlePhaseCurrent", () => {
     const ctx = makeCtx({
       format: "json",
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1", status: "complete" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1", status: "complete" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
@@ -102,15 +103,15 @@ describe("handlePhaseTickets", () => {
     const ctx = makeCtx({
       state: makeState({
         tickets: [
-          makeTicket({ id: "T-001", phase: "p1", title: "First" }),
-          makeTicket({ id: "T-002", phase: "p2", title: "Second" }),
+          makeTicket({ id: "TEST-T-001", phase: "p1", title: "First" }),
+          makeTicket({ id: "TEST-T-002", phase: "p2", title: "Second" }),
         ],
         roadmap: makeRoadmap([makePhase({ id: "p1" }), makePhase({ id: "p2" })]),
       }),
     });
     const result = handlePhaseTickets("p1", ctx);
-    expect(result.output).toContain("T-001");
-    expect(result.output).not.toContain("T-002");
+    expect(result.output).toContain("TEST-T-001");
+    expect(result.output).not.toContain("TEST-T-002");
   });
 
   it("returns empty message for phase with no tickets", () => {
@@ -137,6 +138,7 @@ describe("handlePhaseCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handlePhaseCreate(
       { id: "p1", name: "Phase 1", label: "PHASE 1", description: "First phase", after: "p0", atStart: false },
       "md", dir,
@@ -152,6 +154,7 @@ describe("handlePhaseCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handlePhaseCreate(
       { id: "p-first", name: "First", label: "FIRST", description: "At start", atStart: true },
       "md", dir,
@@ -167,6 +170,7 @@ describe("handlePhaseCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handlePhaseCreate(
         { id: "p0", name: "Dup", label: "DUP", description: "Dup", after: "p0", atStart: false },
@@ -179,6 +183,7 @@ describe("handlePhaseCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handlePhaseCreate(
         { id: "UPPER_CASE", name: "Bad", label: "BAD", description: "Bad", after: "p0", atStart: false },
@@ -191,6 +196,7 @@ describe("handlePhaseCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handlePhaseCreate(
         { id: "p1", name: "Test", label: "T", description: "T", after: "nonexistent", atStart: false },
@@ -221,6 +227,7 @@ describe("handlePhaseCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handlePhaseCreate(
       { id: "p1", name: "Test", label: "TEST", description: "Test", after: "p0", atStart: false },
       "json", dir,
@@ -234,6 +241,7 @@ describe("handlePhaseCreate", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-create-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handlePhaseCreate(
       { id: "p1", name: "Test", label: "TEST", description: "Full desc", summary: "Short", after: "p0", atStart: false },
       "json", dir,
@@ -254,6 +262,7 @@ describe("handlePhaseRename", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-rename-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     const result = await handlePhaseRename("p0", { name: "Renamed" }, "md", dir);
     expect(result.output).toContain("Updated phase p0: Renamed");
     const raw = await readFile(join(dir, ".story", "roadmap.json"), "utf-8");
@@ -265,6 +274,7 @@ describe("handlePhaseRename", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-rename-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handlePhaseRename("nonexistent", { name: "X" }, "md", dir),
     ).rejects.toThrow("not found");
@@ -274,6 +284,7 @@ describe("handlePhaseRename", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-rename-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handlePhaseRename("p0", { label: "RENAMED" }, "json", dir);
     const raw = await readFile(join(dir, ".story", "roadmap.json"), "utf-8");
     const roadmap = JSON.parse(raw);
@@ -293,6 +304,7 @@ describe("handlePhaseMove", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-move-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     // Create p1 and p2 after p0
     await handlePhaseCreate(
       { id: "p1", name: "Phase 1", label: "P1", description: "D1", after: "p0", atStart: false },
@@ -314,6 +326,7 @@ describe("handlePhaseMove", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-move-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handlePhaseCreate(
       { id: "p1", name: "Phase 1", label: "P1", description: "D1", after: "p0", atStart: false },
       "md", dir,
@@ -331,6 +344,7 @@ describe("handlePhaseMove", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-move-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handlePhaseMove("nonexistent", { after: "p0", atStart: false }, "md", dir),
     ).rejects.toThrow("not found");
@@ -348,6 +362,7 @@ describe("handlePhaseDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handlePhaseCreate(
       { id: "p1", name: "Empty", label: "E", description: "E", after: "p0", atStart: false },
       "md", dir,
@@ -364,6 +379,7 @@ describe("handlePhaseDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "Ticket", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
@@ -377,6 +393,7 @@ describe("handlePhaseDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handlePhaseCreate(
       { id: "p1", name: "Target", label: "T", description: "T", after: "p0", atStart: false },
       "md", dir,
@@ -388,11 +405,11 @@ describe("handlePhaseDelete", () => {
     );
     // Create issue in p0
     await handleIssueCreate(
-      { title: "I in p0", severity: "medium", impact: "test", components: [], relatedTickets: ["T-001"], location: [] },
+      { title: "I in p0", severity: "medium", impact: "test", components: [], relatedTickets: ["TEST-T-001"], location: [] },
       "md", dir,
     );
     // Manually set issue phase to p0 (issue create doesn't set phase)
-    const issuePath = join(dir, ".story", "issues", "ISS-001.json");
+    const issuePath = join(dir, ".story", "issues", "TEST-ISS-001.json");
     const issueRaw = await readFile(issuePath, "utf-8");
     const issueData = JSON.parse(issueRaw);
     issueData.phase = "p0";
@@ -403,7 +420,7 @@ describe("handlePhaseDelete", () => {
     expect(result.output).toContain("Deleted phase p0");
 
     // Verify ticket reassigned
-    const ticketRaw = await readFile(join(dir, ".story", "tickets", "T-001.json"), "utf-8");
+    const ticketRaw = await readFile(join(dir, ".story", "tickets", "TEST-T-001.json"), "utf-8");
     const ticket = JSON.parse(ticketRaw);
     expect(ticket.phase).toBe("p1");
 
@@ -423,6 +440,7 @@ describe("handlePhaseDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handlePhaseCreate(
       { id: "p1", name: "Target", label: "T", description: "T", after: "p0", atStart: false },
       "md", dir,
@@ -444,8 +462,8 @@ describe("handlePhaseDelete", () => {
     // Delete p0 with reassign to p1
     await handlePhaseDelete("p0", "p1", "md", dir);
     // Verify order: T-001 is in p1 with order 10. Reassigned should be after that.
-    const t2 = JSON.parse(await readFile(join(dir, ".story", "tickets", "T-002.json"), "utf-8"));
-    const t3 = JSON.parse(await readFile(join(dir, ".story", "tickets", "T-003.json"), "utf-8"));
+    const t2 = JSON.parse(await readFile(join(dir, ".story", "tickets", "TEST-T-002.json"), "utf-8"));
+    const t3 = JSON.parse(await readFile(join(dir, ".story", "tickets", "TEST-T-003.json"), "utf-8"));
     expect(t2.phase).toBe("p1");
     expect(t3.phase).toBe("p1");
     expect(t2.order).toBe(20); // 10 (max in p1) + 10
@@ -456,6 +474,7 @@ describe("handlePhaseDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handleTicketCreate(
       { title: "Ticket", type: "task", phase: "p0", description: "", blockedBy: [], parentTicket: null },
       "md", dir,
@@ -475,6 +494,7 @@ describe("handlePhaseDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await expect(
       handlePhaseDelete("nonexistent", undefined, "md", dir),
     ).rejects.toThrow("not found");
@@ -484,6 +504,7 @@ describe("handlePhaseDelete", () => {
     const dir = await mkdtemp(join(tmpdir(), "phase-delete-"));
     tmpDirs.push(dir);
     await initProject(dir, { name: "test" });
+    setTestNamespace(dir);
     await handlePhaseCreate(
       { id: "p1", name: "Empty", label: "E", description: "E", after: "p0", atStart: false },
       "md", dir,

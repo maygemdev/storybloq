@@ -22,7 +22,7 @@ describe("handleStatus", () => {
   it("returns formatted status for md", async () => {
     const ctx = makeCtx({
       state: makeState({
-        tickets: [makeTicket({ id: "T-001", phase: "p1" })],
+        tickets: [makeTicket({ id: "TEST-T-001", phase: "p1" })],
         roadmap: makeRoadmap([makePhase({ id: "p1" })]),
       }),
     });
@@ -67,14 +67,14 @@ describe("formatStatus with active sessions (ISS-023)", () => {
       sessionId: "abcdef1234567890",
       state: "IMPLEMENT",
       mode: "auto",
-      ticketId: "T-042",
+      ticketId: "TEST-T-042",
       ticketTitle: "Build API endpoint",
     }];
     const output = formatStatus(state, "md", sessions);
     expect(output).toContain("## Active Sessions");
     expect(output).toContain("abcdef12");
     expect(output).toContain("IMPLEMENT");
-    expect(output).toContain("T-042");
+    expect(output).toContain("TEST-T-042");
     expect(output).toContain("auto mode");
   });
 
@@ -87,8 +87,8 @@ describe("formatStatus with active sessions (ISS-023)", () => {
   it("shows multiple active sessions", () => {
     const state = makeState();
     const sessions: ActiveSessionSummary[] = [
-      { sessionId: "sess-aaa", state: "PLAN", mode: "guided", ticketId: "T-001", ticketTitle: "First" },
-      { sessionId: "sess-bbb", state: "CODE_REVIEW", mode: "review", ticketId: "T-002", ticketTitle: "Second" },
+      { sessionId: "sess-aaa", state: "PLAN", mode: "guided", ticketId: "TEST-T-001", ticketTitle: "First" },
+      { sessionId: "sess-bbb", state: "CODE_REVIEW", mode: "review", ticketId: "TEST-T-002", ticketTitle: "Second" },
     ];
     const output = formatStatus(state, "md", sessions);
     expect(output).toContain("sess-aaa");
@@ -103,7 +103,7 @@ describe("formatStatus with active sessions (ISS-023)", () => {
       sessionId: "sess-json",
       state: "IMPLEMENT",
       mode: "auto",
-      ticketId: "T-010",
+      ticketId: "TEST-T-010",
       ticketTitle: "JSON test",
     }];
     const output = formatStatus(state, "json", sessions);

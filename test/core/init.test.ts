@@ -95,9 +95,9 @@ describe("initProject", () => {
 
     // Write a ticket manually
     await writeFile(
-      join(testRoot, ".story", "tickets", "T-001.json"),
+      join(testRoot, ".story", "tickets", "TEST-T-001.json"),
       JSON.stringify({
-        id: "T-001", title: "Existing", description: ".", type: "task",
+        id: "TEST-T-001", title: "Existing", description: ".", type: "task",
         status: "open", phase: "p0", order: 10, createdDate: "2026-01-01",
         completedDate: null, blockedBy: [],
       }),
