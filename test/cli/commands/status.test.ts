@@ -72,7 +72,7 @@ describe("formatStatus with active sessions (ISS-023)", () => {
     }];
     const output = formatStatus(state, "md", sessions);
     expect(output).toContain("## Active Sessions");
-    expect(output).toContain("abcdef12");
+    expect(output).toContain("abcdef1234567890");
     expect(output).toContain("IMPLEMENT");
     expect(output).toContain("TEST-T-042");
     expect(output).toContain("auto mode");
