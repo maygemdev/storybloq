@@ -36,11 +36,21 @@ export class PlanStage implements WorkflowStage {
 
   async enter(ctx: StageContext): Promise<StageResult> {
     const ticket = ctx.state.ticket;
+    const issue = ctx.state.currentIssue;
+    const targetId = ticket?.id ?? issue?.id ?? "unknown";
+    const targetTitle = ticket?.title ?? issue?.title ?? "";
+    const reproduction = ctx.state.work?.reproduction;
     return {
       instruction: [
-        `# Plan for ${ticket?.id ?? "unknown"}: ${ticket?.title ?? ""}`,
+        `# Plan for ${targetId}: ${targetTitle}`,
         "",
-        `Write an implementation plan for this ticket. Save it to \`.story/sessions/${ctx.state.sessionId}/plan.md\`.`,
+        issue && reproduction
+          ? reproduction.applicable
+            ? `Reproduction test: ${(reproduction.testPaths ?? []).join(", ")} via \`${reproduction.command}\`; expected failure: ${reproduction.failureSummary}`
+            : `Automated reproduction not applicable: ${reproduction.notApplicableReason}. Manual verification: ${reproduction.manualVerification}`
+          : "",
+        "",
+        `Write an implementation plan for this ${issue ? "issue" : "ticket"}. Save it to \`.story/sessions/${ctx.state.sessionId}/plan.md\`.`,
         "",
         "When done, call `storybloq_autonomous_guide` with:",
         '```json',
@@ -57,7 +67,7 @@ export class PlanStage implements WorkflowStage {
 
   async report(ctx: StageContext, _report: GuideReportInput): Promise<StageAdvance> {
     if (_report.completedAction === "skip_ticket") {
-      const ticketId = ctx.state.ticket?.id ?? "unknown";
+      const ticketId = ctx.state.ticket?.id ?? ctx.state.currentIssue?.id ?? "unknown";
       const reason = _report.notes ?? "Ticket cannot be completed in this session.";
 
       if (ctx.state.ticket) {
@@ -72,7 +82,22 @@ export class PlanStage implements WorkflowStage {
         } catch { /* best-effort */ }
       }
 
-      ctx.updateDraft({ ticket: undefined, reviews: { plan: [], code: [] } });
+      if (ctx.state.currentIssue) {
+        try {
+          const { withProjectLock, writeIssueUnlocked } = await import("../../core/project-loader.js");
+          await withProjectLock(ctx.root, { strict: false }, async ({ state: ps }) => {
+            const issue = ps.issueByID(ctx.state.currentIssue!.id);
+            if (issue && issue.status === "inprogress") {
+              const claim = (issue as Record<string, unknown>).claimedBySession;
+              if (!claim || claim === ctx.state.sessionId) {
+                await writeIssueUnlocked({ ...issue, status: "open" as const, claimedBySession: null }, ctx.root);
+              }
+            }
+          });
+        } catch { /* best-effort */ }
+      }
+
+      ctx.updateDraft({ ticket: undefined, currentIssue: null, reviews: { plan: [], code: [] } });
 
       return {
         action: "goto",

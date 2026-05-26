@@ -15,12 +15,16 @@ export class ImplementStage implements WorkflowStage {
 
   async enter(ctx: StageContext): Promise<StageResult> {
     const ticket = ctx.state.ticket;
+    const issue = ctx.state.currentIssue;
+    const targetId = ticket?.id ?? issue?.id ?? "unknown";
+    const targetTitle = ticket?.title ?? issue?.title ?? "";
     const planPath = `.story/sessions/${ctx.state.sessionId}/plan.md`;
     return {
       instruction: [
-        `# Implement — ${ticket?.id ?? "unknown"}: ${ticket?.title ?? ""}`,
+        `# Implement — ${targetId}: ${targetTitle}`,
         "",
         `Implement the approved plan at \`${planPath}\`.`,
+        issue ? `Before code review, update \`.story/issues/${issue.id}.json\` to status "resolved" with resolution text and resolvedDate.` : "",
         "",
         "When done, call `storybloq_autonomous_guide` with:",
         '```json',
@@ -31,6 +35,7 @@ export class ImplementStage implements WorkflowStage {
         "Follow the plan exactly. Do NOT deviate without re-planning.",
         "Do NOT ask the user for confirmation.",
         "If you discover pre-existing bugs, failing tests not caused by your changes, or other out-of-scope problems, file them as issues using storybloq_issue_create. Do not fix them inline.",
+        ...(issue ? ["Run the reproduction/regression tests and ensure they now pass before reporting implementation_done."] : []),
         "Track which files you create or modify. Only these files should be staged at commit time.",
       ],
       transitionedFrom: ctx.state.previousState ?? undefined,

@@ -262,7 +262,7 @@ The server imports the same TypeScript modules as the CLI directly, so there's n
 
 ### Autonomous mode + review + observability
 
-`storybloq_autonomous_guide` drives the autonomous state machine (PICK_TICKET -> PLAN -> PLAN_REVIEW -> WRITE_TESTS -> IMPLEMENT -> TEST -> CODE_REVIEW -> FINALIZE -> COMPLETE).
+`storybloq_autonomous_guide` drives the autonomous state machine (PICK_TICKET -> PLAN -> PLAN_REVIEW -> WRITE_TESTS -> IMPLEMENT -> TEST -> CODE_REVIEW -> FINALIZE -> COMPLETE), with human-gated issue work adding REPRODUCE_ISSUE before PLAN and REGRESSION_TEST before review fixes.
 
 `storybloq_review_lenses_prepare` · `storybloq_review_lenses_judge` · `storybloq_review_lenses_synthesize` orchestrate the multi-lens review loop (requires [@storybloq/lenses](https://github.com/Storybloq/lenses)).
 

@@ -21,9 +21,11 @@ export type WorkflowState =
   | "INIT"
   | "LOAD_CONTEXT"
   | "PICK_TICKET"
+  | "REPRODUCE_ISSUE"
   | "PLAN"
   | "PLAN_REVIEW"
   | "PENDING_PLAN_APPROVAL"
+  | "REGRESSION_TEST"
   | "IMPLEMENT"
   | "WRITE_TESTS"
   | "TEST"
@@ -47,8 +49,10 @@ export type WorkflowState =
 export type ClaudeStatus = "working" | "idle" | "waiting" | "unknown";
 
 const WORKING_STATES: ReadonlySet<string> = new Set([
+  "REPRODUCE_ISSUE",
   "PLAN",
   "PLAN_REVIEW",
+  "REGRESSION_TEST",
   "IMPLEMENT",
   "WRITE_TESTS",
   "TEST",
@@ -264,8 +268,9 @@ export type StatusPayload = StatusPayloadActive | StatusPayloadInactive;
 
 export const WORKFLOW_STATES = [
   "INIT", "LOAD_CONTEXT", "PICK_TICKET",
+  "REPRODUCE_ISSUE",
   "PLAN", "PLAN_REVIEW", "PENDING_PLAN_APPROVAL",
-  "IMPLEMENT", "WRITE_TESTS", "TEST", "CODE_REVIEW", "PENDING_SHIP", "BUILD", "VERIFY",
+  "REGRESSION_TEST", "IMPLEMENT", "WRITE_TESTS", "TEST", "CODE_REVIEW", "PENDING_SHIP", "BUILD", "VERIFY",
   "FINALIZE", "COMPACT",
   "HANDOVER", "COMPLETE", "LESSON_CAPTURE", "ISSUE_FIX", "ISSUE_SWEEP", "SESSION_END",
 ] as const;
@@ -312,6 +317,24 @@ export interface Finding {
   readonly disposition: "open" | "addressed" | "contested" | "deferred";
   readonly recommendedNextState?: "PLAN" | "IMPLEMENT";
 }
+
+export interface WorkTestProof {
+  readonly applicable: boolean;
+  readonly testPaths?: readonly string[];
+  readonly command?: string;
+  readonly failureSummary?: string;
+  readonly notApplicableReason?: string;
+  readonly manualVerification?: string;
+}
+
+const WorkTestProofSchema = z.object({
+  applicable: z.boolean(),
+  testPaths: z.array(z.string()).optional(),
+  command: z.string().optional(),
+  failureSummary: z.string().optional(),
+  notApplicableReason: z.string().optional(),
+  manualVerification: z.string().optional(),
+}).passthrough();
 
 // ---------------------------------------------------------------------------
 // Git baseline (captured at INIT)
@@ -573,6 +596,8 @@ export const SessionStateSchema = z.object({
     pinnedBranch: z.string().nullable().default(null),
     changedFiles: z.array(z.string()).default([]),
     shipChangePolicy: z.enum(["all", "session-only"]).nullable().default(null),
+    reproduction: WorkTestProofSchema.optional(),
+    regressionTest: WorkTestProofSchema.optional(),
   }).optional(),
 
   // T-124: Test stage baseline and retry tracking
@@ -681,6 +706,8 @@ export interface GuideReportInput {
   readonly handoverContent?: string;
   readonly verdict?: string;
   readonly findings?: readonly Finding[];
+  readonly reproduction?: WorkTestProof;
+  readonly regressionTest?: WorkTestProof;
   readonly reviewerSessionId?: string;
   readonly overrideOverlap?: boolean;
   readonly notes?: string;
@@ -695,6 +722,8 @@ export interface GuideInput {
   readonly mode?: SessionMode;
   /** Ticket ID for tiered modes (review, plan, guided, work). */
   readonly ticketId?: string;
+  /** Issue ID for human-gated work mode. */
+  readonly issueId?: string;
   /** T-188: Target work items for targeted auto mode. Array of {NS}-T-XXX and {NS}-ISS-XXX IDs. */
   readonly targetWork?: readonly string[];
   /** ADR 0002: Human feedback for work-mode gate revision. */

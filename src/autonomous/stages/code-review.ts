@@ -1,6 +1,6 @@
 import type { WorkflowStage, StageResult, StageAdvance, StageContext } from "./types.js";
 import { buildLensHistoryUpdate } from "./types.js";
-import type { GuideReportInput } from "../session-types.js";
+import type { Finding, GuideReportInput } from "../session-types.js";
 import { requiredRounds, nextReviewer } from "../review-depth.js";
 import { clearCache } from "../review-lenses/cache.js";
 import { gitDiffNames, gitStatus } from "../git-inspector.js";
@@ -43,6 +43,29 @@ async function currentWorktreeChangedFiles(root: string, mergeBase?: string | nu
     }
   }
   return [...files].sort();
+}
+
+const FUNCTIONAL_FINDING_CATEGORIES = new Set([
+  "behavior",
+  "validation",
+  "error-handling",
+  "state",
+  "security",
+  "concurrency",
+  "regression",
+  "api",
+  "data",
+  "test-quality",
+]);
+
+function isFunctionalFinding(finding: Finding): boolean {
+  const category = finding.category.toLowerCase();
+  return FUNCTIONAL_FINDING_CATEGORIES.has(category) ||
+    (finding.recommendedNextState === "IMPLEMENT" && (finding.severity === "critical" || finding.severity === "major"));
+}
+
+function hasNonTestableRationale(notes: string | undefined): boolean {
+  return !!notes && /(not testable|not applicable|cannot be tested|no automated test|manual verification)/i.test(notes);
 }
 
 /**
@@ -175,8 +198,16 @@ export class CodeReviewStage implements WorkflowStage {
 
       if (ctx.state.currentIssue) {
         try {
-          const { handleIssueUpdate } = await import("../../cli/commands/issue.js");
-          await handleIssueUpdate(ctx.state.currentIssue.id, { status: "open" }, "json", ctx.root);
+          const { withProjectLock, writeIssueUnlocked } = await import("../../core/project-loader.js");
+          await withProjectLock(ctx.root, { strict: false }, async ({ state: ps }) => {
+            const issue = ps.issueByID(ctx.state.currentIssue!.id);
+            if (issue && issue.status === "inprogress") {
+              const claim = (issue as Record<string, unknown>).claimedBySession;
+              if (!claim || claim === ctx.state.sessionId) {
+                await writeIssueUnlocked({ ...issue, status: "open" as const, claimedBySession: null }, ctx.root);
+              }
+            }
+          });
         } catch { /* best-effort */ }
       }
 
@@ -251,9 +282,16 @@ export class CodeReviewStage implements WorkflowStage {
       return { action: "retry", instruction: "Contradictory review payload: verdict is 'approve' but findings recommend replanning. Re-run the review or correct the verdict." };
     }
 
-    let nextAction: "PLAN" | "IMPLEMENT" | "FINALIZE" | "CODE_REVIEW";
+    const requiresRegressionTest = ctx.state.mode === "work" &&
+      verdict !== "approve" &&
+      findings.some((f) => f.disposition !== "addressed" && f.disposition !== "deferred" && isFunctionalFinding(f)) &&
+      !hasNonTestableRationale(report.notes);
+
+    let nextAction: "PLAN" | "IMPLEMENT" | "REGRESSION_TEST" | "FINALIZE" | "CODE_REVIEW";
     if (planRedirect && verdict !== "approve") {
       nextAction = "PLAN";
+    } else if (requiresRegressionTest) {
+      nextAction = "REGRESSION_TEST";
     } else if (verdict === "reject" || verdict === "revise" || verdict === "request_changes") {
       nextAction = "IMPLEMENT";
     } else if (verdict === "approve" || (!hasCriticalOrMajor && roundNum >= minRounds)) {
@@ -321,12 +359,12 @@ export class CodeReviewStage implements WorkflowStage {
         round: roundNum,
         verdict,
         findingCount: findings.length,
-        redirectedTo: isIssueFix ? "ISSUE_FIX" : "PLAN",
+        redirectedTo: isIssueFix && ctx.state.mode !== "work" ? "ISSUE_FIX" : "PLAN",
       });
 
       await ctx.fileDeferredFindings(findings, "code");
 
-      if (isIssueFix) {
+      if (isIssueFix && ctx.state.mode !== "work") {
         return { action: "goto", target: "ISSUE_FIX" };
       }
       return { action: "back", target: "PLAN", reason: "plan_redirect" };
@@ -359,9 +397,35 @@ export class CodeReviewStage implements WorkflowStage {
 
     await ctx.fileDeferredFindings(findings, "code");
 
+    if (nextAction === "REGRESSION_TEST") {
+      const functionalFindings = findings.filter((f) => f.disposition !== "addressed" && f.disposition !== "deferred" && isFunctionalFinding(f));
+      return {
+        action: "goto",
+        target: "REGRESSION_TEST",
+        result: {
+          instruction: [
+            "# Add Regression Test",
+            "",
+            "Code review found functional behavior that must be proven with a failing test before implementation resumes.",
+            "",
+            ...functionalFindings.slice(0, 5).map((f) => `- [${f.severity}] ${f.category}: ${f.description}`),
+            "",
+            "Add or update a focused regression test, run the targeted command, and verify it fails for the expected reason.",
+            "",
+            "When done, call `storybloq_autonomous_guide` with:",
+            "```json",
+            `{ "sessionId": "${ctx.state.sessionId}", "action": "report", "report": { "completedAction": "regression_test_written", "regressionTest": { "applicable": true, "testPaths": ["path/to/test"], "command": "npm test -- path/to/test", "failureSummary": "fails because ..." } } }`,
+            "```",
+          ].join("\n"),
+          reminders: ["Do not fix code before recording the failing regression test."],
+          transitionedFrom: "CODE_REVIEW",
+        },
+      };
+    }
+
     if (nextAction === "IMPLEMENT") {
       // T-208: Issue fixes route back to ISSUE_FIX instead of IMPLEMENT
-      if (isIssueFix) {
+      if (isIssueFix && ctx.state.mode !== "work") {
         return { action: "goto", target: "ISSUE_FIX" };
       }
       return { action: "back", target: "IMPLEMENT", reason: "request_changes" };
@@ -391,6 +455,25 @@ export class CodeReviewStage implements WorkflowStage {
         } as StageAdvance;
       }
       if (ctx.state.mode === "work") {
+        const workTarget = ctx.state.ticket?.id ?? ctx.state.currentIssue?.id ?? "current work";
+        if (ctx.state.currentIssue) {
+          try {
+            const { state: projectState } = await ctx.loadProject();
+            const issue = projectState.issues.find((i) => i.id === ctx.state.currentIssue?.id);
+            if (!issue || issue.status !== "resolved" || !issue.resolution?.trim() || !issue.resolvedDate) {
+              return {
+                action: "retry",
+                instruction: `Issue ${ctx.state.currentIssue.id} must be resolved before the ship gate. Update .story/issues/${ctx.state.currentIssue.id}.json with status "resolved", resolution text, and resolvedDate, then report the code review verdict again.`,
+                reminders: ["Do not pause at PENDING_SHIP until the issue JSON is resolved."],
+              };
+            }
+          } catch (err) {
+            return {
+              action: "retry",
+              instruction: `Failed to verify issue resolution: ${err instanceof Error ? err.message : String(err)}. Fix .story/ state and report the code review verdict again.`,
+            };
+          }
+        }
         const changedFiles = await currentWorktreeChangedFiles(ctx.root, ctx.state.git.mergeBase);
         ctx.writeState({
           work: {
@@ -406,7 +489,7 @@ export class CodeReviewStage implements WorkflowStage {
             instruction: [
               "# Work Session -- Ready to Ship",
               "",
-              `Code for **${ctx.state.ticket?.id}** has passed automated review after ${roundNum} round(s).`,
+              `Code for **${workTarget}** has passed automated review after ${roundNum} round(s).`,
               "",
               "Surface the diff summary, test results, and review result to the human.",
               "If they approve, they should run `/story ship`.",

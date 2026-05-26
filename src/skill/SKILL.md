@@ -51,7 +51,8 @@ This guard has precedence over every "do not ask the user" rule elsewhere in thi
 - `/story` -> full context load (default, see Step 2 below)
 - `/story auto` -> start autonomous mode (read `autonomous-mode.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
 - `/story auto DEV01-T-183 DEV01-T-184 DEV01-ISS-077` -> start targeted autonomous mode with ONLY those items in order (read `autonomous-mode.md`; pass the IDs as `targetWork` array in the start call)
-- `/story start {NS}-T-XXX` -> start human-gated work mode for one ticket (read `autonomous-mode.md`; call guide start with `mode: "work"`)
+- `/story start {NS}-T-XXX` -> start human-gated work mode for one ticket (read `autonomous-mode.md`; call guide start with `mode: "work"` and `ticketId`)
+- `/story start {NS}-ISS-XXX` -> start human-gated work mode for one issue (read `autonomous-mode.md`; call guide start with `mode: "work"` and `issueId`)
 - `/story execute` -> approve the plan for the active work session (read `autonomous-mode.md`; call guide with `action: "execute"`)
 - `/story ship` -> approve code for the active work session and finalize/commit (read `autonomous-mode.md`; call guide with `action: "ship"`)
 - `/story review {NS}-T-XXX` -> start review mode for a ticket (read `autonomous-mode.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
@@ -195,6 +196,7 @@ Example: "Rules: integer cents for money, billing engine is pure logic, TDD for 
 ```
 Tip: You can also use these modes anytime:
   /story start {NS}-T-XXX    Human-gated work mode for one ticket
+  /story start {NS}-ISS-XXX  Human-gated work mode for one issue
   /story auto {NS}-T-XXX {NS}-ISS-YYY  Autonomous mode scoped to specific tickets/issues
   /story review {NS}-T-XXX   Review code you already wrote
   /story plan {NS}-T-XXX     Plan a ticket with review rounds

@@ -96,7 +96,9 @@ export const RECOVERY_MAPPING: Readonly<Record<string, { state: string; resetPla
   COMPLETE:       { state: "PICK_TICKET", resetPlan: false, resetCode: false },
   HANDOVER:       { state: "SESSION_END", resetPlan: false, resetCode: false },
   PLAN:           { state: "PLAN",        resetPlan: true,  resetCode: false },
+  REPRODUCE_ISSUE: { state: "REPRODUCE_ISSUE", resetPlan: true, resetCode: false },
   PENDING_PLAN_APPROVAL: { state: "PENDING_PLAN_APPROVAL", resetPlan: false, resetCode: false },
+  REGRESSION_TEST: { state: "REGRESSION_TEST", resetPlan: false, resetCode: true },
   IMPLEMENT:      { state: "PLAN",        resetPlan: true,  resetCode: false },
   WRITE_TESTS:    { state: "PLAN",        resetPlan: true,  resetCode: false },
   BUILD:          { state: "IMPLEMENT",   resetPlan: false, resetCode: true  },
@@ -250,6 +252,7 @@ async function recoverPendingMutation(
     const targetId = m.target as string;
     const targetValue = m.value as string;
     const expectedCurrent = m.expectedCurrent as string | undefined;
+    const claimedBySession = m.claimedBySession as string | null | undefined;
     try {
       const { loadProject } = await import("../core/project-loader.js");
       const { state: projectState } = await loadProject(root);
@@ -259,8 +262,16 @@ async function recoverPendingMutation(
           // Already applied -- clear marker
         } else if (expectedCurrent && issue.status === expectedCurrent) {
           // Safe to replay
-          const { handleIssueUpdate } = await import("../cli/commands/issue.js");
-          await handleIssueUpdate(targetId, { status: targetValue }, "json", root);
+          const { withProjectLock, writeIssueUnlocked } = await import("../core/project-loader.js");
+          await withProjectLock(root, { strict: false }, async ({ state: ps }) => {
+            const current = ps.issueByID(targetId);
+            if (!current) return;
+            await writeIssueUnlocked({
+              ...current,
+              status: targetValue as typeof current.status,
+              ...(claimedBySession !== undefined ? { claimedBySession } : {}),
+            }, root);
+          });
         } else {
           // Conflict: issue in unexpected state (e.g., manually resolved) -- do not revert
           appendEvent(dir, {
@@ -697,11 +708,22 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
   // Determine session mode
   const mode = args.mode ?? "auto";
 
-  // Non-auto modes require ticketId
-  if (mode !== "auto" && !args.ticketId) {
-    return guideError(new Error(
-      `Mode "${mode}" requires a ticketId. Call with: { "action": "start", "mode": "${mode}", "ticketId": "{NS}-T-XXX" }`,
-    ));
+  // Non-auto modes require a target. Work mode accepts either tickets or issues;
+  // other tiered modes remain ticket-only.
+  if (mode !== "auto") {
+    const hasTicket = !!args.ticketId;
+    const hasIssue = !!args.issueId;
+    if (mode === "work") {
+      if (hasTicket === hasIssue) {
+        return guideError(new Error(
+          'Mode "work" requires exactly one of ticketId or issueId. Call with { "action": "start", "mode": "work", "ticketId": "{NS}-T-XXX" } or { "action": "start", "mode": "work", "issueId": "{NS}-ISS-XXX" }.',
+        ));
+      }
+    } else if (!hasTicket || hasIssue) {
+      return guideError(new Error(
+        `Mode "${mode}" requires a ticketId. Call with: { "action": "start", "mode": "${mode}", "ticketId": "{NS}-T-XXX" }`,
+      ));
+    }
   }
 
   // T-188: Targeted mode validation (before session creation)
@@ -1102,11 +1124,117 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
     } catch { /* best-effort */ }
 
     // --- Tiered mode: non-auto modes skip PICK_TICKET and enter at specific stage ---
-    if (mode !== "auto" && args.ticketId) {
-      const ticket = projectState.ticketByID(args.ticketId);
+    if (mode !== "auto" && (args.ticketId || args.issueId)) {
+      if (args.issueId) {
+        const issue = projectState.issues.find((i) => i.id === args.issueId);
+        if (!issue) {
+          abortSession();
+          return guideError(new Error(`Issue ${args.issueId} not found.`));
+        }
+        if (issue.status === "resolved") {
+          abortSession();
+          return guideError(new Error(`Issue ${args.issueId} is already resolved.`));
+        }
+
+        const claimId = (issue as Record<string, unknown>).claimedBySession;
+        if (issue.status === "inprogress" && claimId && claimId !== session.sessionId) {
+          const claimingSession = typeof claimId === "string" ? findSessionById(root, claimId) : null;
+          if (claimingSession && claimingSession.state.status === "active" && !isLeaseExpired(claimingSession.state)) {
+            abortSession();
+            return guideError(new Error(
+              `Issue ${args.issueId} is claimed by active session ${claimId}. ` +
+              `Wait for it to finish or stop it with "storybloq session stop ${claimId}".`,
+            ));
+          }
+        }
+
+        if (issue.status !== "open" && !(issue.status === "inprogress" && claimId === session.sessionId)) {
+          abortSession();
+          return guideError(new Error(`Issue ${args.issueId} is ${issue.status}. Pick an open issue.`));
+        }
+
+        const transitionId = `issue-work-start-${issue.id}-${Date.now()}`;
+        updated = {
+          ...updated,
+          state: "REPRODUCE_ISSUE",
+          previousState: "INIT",
+          currentIssue: { id: issue.id, title: issue.title, severity: issue.severity },
+          ticket: undefined,
+          work: {
+            pinnedBranch: headResult.data.branch,
+            changedFiles: [],
+            shipChangePolicy: null,
+          },
+          pendingProjectMutation: {
+            type: "issue_update",
+            target: issue.id,
+            field: "status",
+            value: "inprogress",
+            expectedCurrent: issue.status,
+            claimedBySession: session.sessionId,
+            transitionId,
+          },
+        } as FullSessionState;
+
+        updated = writeSessionAndRefresh(root, dir, refreshLease(updated), "never");
+
+        try {
+          const { withProjectLock, writeIssueUnlocked } = await import("../core/project-loader.js");
+          await withProjectLock(root, { strict: false }, async ({ state: ps }) => {
+            const current = ps.issueByID(issue.id);
+            if (!current) throw new Error(`Issue ${issue.id} not found.`);
+            const currentClaim = (current as Record<string, unknown>).claimedBySession;
+            if (current.status === "resolved") throw new Error(`Issue ${issue.id} is already resolved.`);
+            if (current.status === "inprogress" && currentClaim && currentClaim !== session.sessionId) {
+              throw new Error(`Issue ${issue.id} is already claimed by ${currentClaim}.`);
+            }
+            if (current.status !== "open" && !(current.status === "inprogress" && currentClaim === session.sessionId)) {
+              throw new Error(`Issue ${issue.id} is ${current.status}.`);
+            }
+            await writeIssueUnlocked({
+              ...current,
+              status: "inprogress" as const,
+              claimedBySession: session.sessionId,
+            }, root);
+          });
+          updated = { ...updated, pendingProjectMutation: null };
+        } catch (err) {
+          abortSession();
+          return guideError(new Error(err instanceof Error ? err.message : String(err)));
+        }
+
+        updated = refreshLease(updated);
+        const pressure = evaluatePressure(updated);
+        updated = { ...updated, contextPressure: { ...updated.contextPressure, level: pressure } };
+        const written = writeSessionAndRefresh(root, dir, updated, "never");
+
+        appendEvent(dir, {
+          rev: written.revision,
+          type: "start",
+          timestamp: new Date().toISOString(),
+          data: { recipe, branch: written.git.branch, head: written.git.initHead, mode, issueId: args.issueId },
+        });
+        emitTelemetry(dir, "session_start", "guide", { recipe, branch: written.git.branch, mode, issueId: args.issueId });
+
+        const stage = getStage("REPRODUCE_ISSUE");
+        if (!stage) {
+          abortSession();
+          return guideError(new Error('Stage "REPRODUCE_ISSUE" is not registered.'));
+        }
+        const ctx = new StageContext(root, dir, written, resolveRecipeFromState(written));
+        const enterResult = await stage.enter(ctx);
+        if (isStageAdvance(enterResult)) return processAdvance(ctx, stage, enterResult);
+        return guideResult(ctx.state, "REPRODUCE_ISSUE", {
+          ...enterResult,
+          transitionedFrom: "INIT",
+        });
+      }
+
+      const ticketId = args.ticketId!;
+      const ticket = projectState.ticketByID(ticketId);
       if (!ticket) {
         abortSession();
-        return guideError(new Error(`Ticket ${args.ticketId} not found.`));
+        return guideError(new Error(`Ticket ${ticketId} not found.`));
       }
 
       // Validate ticket is workable (same checks as PICK_TICKET)
@@ -1114,11 +1242,11 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
         // review mode allows any ticket status — user already has code
         if (ticket.status === "complete") {
           abortSession();
-          return guideError(new Error(`Ticket ${args.ticketId} is already complete.`));
+          return guideError(new Error(`Ticket ${ticketId} is already complete.`));
         }
         if (projectState.isBlocked(ticket)) {
           abortSession();
-          return guideError(new Error(`Ticket ${args.ticketId} is blocked by: ${ticket.blockedBy.join(", ")}.`));
+          return guideError(new Error(`Ticket ${ticketId} is blocked by: ${ticket.blockedBy.join(", ")}.`));
         }
       }
 
@@ -1133,7 +1261,7 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
           if (claimingSession && claimingSession.state.status === "active" && !isLeaseExpired(claimingSession.state)) {
             abortSession();
             return guideError(new Error(
-              `Ticket ${args.ticketId} is claimed by active session ${claimId}. ` +
+              `Ticket ${ticketId} is claimed by active session ${claimId}. ` +
               `Wait for it to finish or stop it with "storybloq session stop ${claimId}".`,
             ));
           }
@@ -1180,9 +1308,9 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
         rev: written.revision,
         type: "start",
         timestamp: new Date().toISOString(),
-        data: { recipe, branch: written.git.branch, head: written.git.initHead, mode, ticketId: args.ticketId },
+        data: { recipe, branch: written.git.branch, head: written.git.initHead, mode, ticketId },
       });
-      emitTelemetry(dir, "session_start", "guide", { recipe, branch: written.git.branch, mode, ticketId: args.ticketId });
+      emitTelemetry(dir, "session_start", "guide", { recipe, branch: written.git.branch, mode, ticketId });
 
       const modeLabels: Record<string, string> = {
         review: "Review Mode",
@@ -1691,7 +1819,7 @@ async function handleExecute(root: string, args: GuideInput): Promise<McpToolRes
     rev: state.revision,
     type: "work_plan_approved",
     timestamp: new Date().toISOString(),
-    data: { ticketId: state.ticket?.id ?? null },
+    data: { ticketId: state.ticket?.id ?? null, issueId: state.currentIssue?.id ?? null },
   });
 
   return transitionFromWorkGate(root, info.dir, state, "PLAN_REVIEW");
@@ -1712,6 +1840,26 @@ async function handleShip(root: string, args: GuideInput): Promise<McpToolResult
   }
   const branchError = await validateWorkPinnedBranch(root, state);
   if (branchError) return branchError;
+
+  if (state.currentIssue) {
+    try {
+      const { withProjectLock, writeIssueUnlocked } = await import("../core/project-loader.js");
+      await withProjectLock(root, { strict: false }, async ({ state: projectState }) => {
+        const issue = projectState.issueByID(state.currentIssue!.id);
+        if (!issue) throw new Error(`Issue ${state.currentIssue!.id} not found.`);
+        if (issue.status !== "resolved" || !issue.resolution?.trim() || !issue.resolvedDate) {
+          throw new Error(`Issue ${issue.id} must be resolved with resolution text and resolvedDate before shipping.`);
+        }
+        const claim = (issue as Record<string, unknown>).claimedBySession;
+        if (claim && claim !== state.sessionId) {
+          throw new Error(`Issue ${issue.id} is claimed by another session (${claim}).`);
+        }
+        await writeIssueUnlocked({ ...issue, claimedBySession: null }, root);
+      });
+    } catch (err) {
+      return guideError(new Error(err instanceof Error ? err.message : String(err)));
+    }
+  }
 
   const currentFiles = await currentWorktreeChangedFiles(root, state.git.mergeBase);
   if (!currentFiles.ok) return guideError(new Error(`Cannot inspect worktree changes: ${currentFiles.message}`));
@@ -1751,7 +1899,7 @@ async function handleShip(root: string, args: GuideInput): Promise<McpToolResult
     rev: updated.revision,
     type: "work_ship_approved",
     timestamp: new Date().toISOString(),
-    data: { ticketId: updated.ticket?.id ?? null, shipChangePolicy: policy ?? "session-only" },
+    data: { ticketId: updated.ticket?.id ?? null, issueId: updated.currentIssue?.id ?? null, shipChangePolicy: policy ?? "session-only" },
   });
 
   return transitionFromWorkGate(root, info.dir, updated, "CODE_REVIEW");
@@ -2448,6 +2596,29 @@ async function handleCancel(root: string, args: GuideInput): Promise<McpToolResu
     }
   }
 
+  let issueReleased = false;
+  let issueConflict = false;
+  const issueId = cancelInfo.state.currentIssue?.id;
+  if (issueId) {
+    try {
+      const { withProjectLock, writeIssueUnlocked } = await import("../core/project-loader.js");
+      await withProjectLock(root, { strict: false }, async ({ state: projectState }) => {
+        const issue = projectState.issueByID(issueId);
+        if (issue && issue.status === "inprogress") {
+          const issueClaim = (issue as Record<string, unknown>).claimedBySession;
+          if (!issueClaim || issueClaim === cancelInfo.state.sessionId) {
+            await writeIssueUnlocked({ ...issue, status: "open" as const, claimedBySession: null }, root);
+            issueReleased = true;
+          } else {
+            issueConflict = true;
+          }
+        }
+      });
+    } catch {
+      // Best-effort -- session ends regardless, issue may remain inprogress.
+    }
+  }
+
   // T-125: Restore auto-stashed changes on cancel
   let stashPopFailed = false;
   const autoStash = cancelInfo.state.git.autoStash;
@@ -2466,6 +2637,7 @@ async function handleCancel(root: string, args: GuideInput): Promise<McpToolResu
     compactPreparedAt: null,
     resumeBlocked: false,
     ticket: undefined,
+    currentIssue: null,
   } as FullSessionState, "always");
   // T-260: Same-process finalization (after state write succeeds)
   try { killSidecar(cancelInfo.state.sidecarPid); } catch { /* best-effort */ }
@@ -2478,8 +2650,11 @@ async function handleCancel(root: string, args: GuideInput): Promise<McpToolResu
     data: {
       previousState: cancelInfo.state.state,
       ticketId: ticketId ?? null,
+      issueId: issueId ?? null,
       ticketReleased,
       ticketConflict,
+      issueReleased,
+      issueConflict,
       stashPopFailed,
     },
   });
@@ -2491,8 +2666,11 @@ async function handleCancel(root: string, args: GuideInput): Promise<McpToolResu
         previousState: cancelInfo.state.state,
         reason: "cancelled",
         ticketId: ticketId ?? null,
+        issueId: issueId ?? null,
         ticketReleased,
         ticketConflict,
+        issueReleased,
+        issueConflict,
         stashPopFailed,
       },
     },
@@ -2570,7 +2748,11 @@ function guideResult(
   },
 ): McpToolResult {
   const summary: SessionSummary = {
-    ticket: state.ticket ? `${state.ticket.id}: ${state.ticket.title}` : "none",
+    ticket: state.ticket
+      ? `${state.ticket.id}: ${state.ticket.title}`
+      : state.currentIssue
+      ? `${state.currentIssue.id}: ${state.currentIssue.title}`
+      : "none",
     risk: state.ticket?.risk ?? "unknown",
     completed: [...state.completedTickets.map((t) => t.id), ...(state.resolvedIssues ?? [])],
     currentStep: currentState,

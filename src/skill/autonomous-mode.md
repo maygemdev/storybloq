@@ -88,6 +88,8 @@ In Pi, run in the foreground with the Storybloq Pi extension installed and use `
 
 `/story start {NS}-T-XXX` starts a single-ticket work session where the agent plans, reviews, implements, tests, and self-reviews, but the human gates implementation and commit.
 
+`/story start {NS}-ISS-XXX` starts a single-issue work session with the same human gates, but it begins with a test-first reproduction phase before planning.
+
 **How it works:**
 
 1. `/story start DEV01-T-012`: call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "mode": "work", "ticketId": "DEV01-T-012" }`
@@ -95,6 +97,16 @@ In Pi, run in the foreground with the Storybloq Pi extension installed and use `
 3. If the human approves, `/story execute` calls `{ "sessionId": "<id>", "action": "execute" }`
 4. The guide implements, tests, and runs code review, then pauses at `PENDING_SHIP`
 5. If the human approves, `/story ship` calls `{ "sessionId": "<id>", "action": "ship" }`; the guide finalizes, commits, completes the ticket, and ends the session
+
+For issue work:
+
+1. `/story start DEV01-ISS-012`: call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "mode": "work", "issueId": "DEV01-ISS-012" }`
+2. The guide enters `REPRODUCE_ISSUE`; add a focused failing reproduction test when applicable, or record why no automated test applies
+3. The guide then plans and runs automated plan review, pausing at `PENDING_PLAN_APPROVAL`
+4. After `/story execute`, implement the approved fix, make the reproduction/regression tests pass, and update the issue JSON to `resolved` with resolution text and resolvedDate before code review approval
+5. The guide pauses at `PENDING_SHIP`; `/story ship` finalizes, commits, records the issue in `resolvedIssues`, and ends the session
+
+During work mode, if code review finds a functional bug or behavioral regression, the guide enters `REGRESSION_TEST` before returning to implementation. Add a focused failing regression test first, report the targeted command and expected failure, then fix the code.
 
 **Feedback at gates:**
 
@@ -142,7 +154,7 @@ The autonomous guide supports four execution tiers. Same guide, same handlers, d
 Use `/story auto {NS}-T-XXX` instead. A single-ticket targeted auto session is equivalent. The guide handler still accepts `mode: "guided"` for backward compatibility but routes to the same targeted auto path.
 
 ### All tiered modes:
-- Require a `ticketId` -- no ad-hoc review without a ticket in V1
+- Require a `ticketId` -- no ad-hoc review without a ticket in V1. Work mode also accepts `issueId` for `/story start {NS}-ISS-XXX`
 - Use the same review process as auto mode (same backends, same adaptive depth)
 - Can be cancelled with `action: "cancel"` at any point
 

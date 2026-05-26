@@ -4,8 +4,10 @@
  */
 import { registerStage } from "./registry.js";
 import { PickTicketStage } from "./pick-ticket.js";
+import { ReproduceIssueStage } from "./reproduce-issue.js";
 import { PlanStage } from "./plan.js";
 import { PlanReviewStage } from "./plan-review.js";
+import { RegressionTestStage } from "./regression-test.js";
 import { ImplementStage } from "./implement.js";
 import { WriteTestsStage } from "./write-tests.js";
 import { TestStage } from "./test.js";
@@ -21,8 +23,10 @@ import { HandoverStage } from "./handover.js";
 
 // Register all extracted stages (pipeline order)
 registerStage(new PickTicketStage());
+registerStage(new ReproduceIssueStage());
 registerStage(new PlanStage());
 registerStage(new PlanReviewStage());
+registerStage(new RegressionTestStage());
 registerStage(new ImplementStage());
 registerStage(new WriteTestsStage());
 registerStage(new TestStage());

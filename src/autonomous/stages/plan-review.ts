@@ -110,7 +110,7 @@ export class PlanReviewStage implements WorkflowStage {
 
   async report(ctx: StageContext, report: GuideReportInput): Promise<StageAdvance> {
     if (report.completedAction === "skip_ticket") {
-      const ticketId = ctx.state.ticket?.id ?? "unknown";
+      const ticketId = ctx.state.ticket?.id ?? ctx.state.currentIssue?.id ?? "unknown";
       const reason = report.notes ?? "Ticket cannot be completed in this session.";
 
       // Release ticket claim so next session can pick it
@@ -126,7 +126,22 @@ export class PlanReviewStage implements WorkflowStage {
         } catch { /* best-effort */ }
       }
 
-      ctx.updateDraft({ ticket: undefined, reviews: { plan: [], code: [] } });
+      if (ctx.state.currentIssue) {
+        try {
+          const { withProjectLock, writeIssueUnlocked } = await import("../../core/project-loader.js");
+          await withProjectLock(ctx.root, { strict: false }, async ({ state: ps }) => {
+            const issue = ps.issueByID(ctx.state.currentIssue!.id);
+            if (issue && issue.status === "inprogress") {
+              const claim = (issue as Record<string, unknown>).claimedBySession;
+              if (!claim || claim === ctx.state.sessionId) {
+                await writeIssueUnlocked({ ...issue, status: "open" as const, claimedBySession: null }, ctx.root);
+              }
+            }
+          });
+        } catch { /* best-effort */ }
+      }
+
+      ctx.updateDraft({ ticket: undefined, currentIssue: null, reviews: { plan: [], code: [] } });
 
       return {
         action: "goto",
@@ -194,7 +209,7 @@ export class PlanReviewStage implements WorkflowStage {
     }
 
     // T-263: Build and write review verdict artifact
-    const target = ctx.state.ticket?.id ?? "unknown";
+    const target = ctx.state.ticket?.id ?? ctx.state.currentIssue?.id ?? "unknown";
     const criticalCount = findings.filter((f) => f.severity === "critical").length;
     const majorCount = findings.filter((f) => f.severity === "major").length;
     const minorCount = findings.filter((f) => f.severity === "minor").length;
@@ -265,7 +280,7 @@ export class PlanReviewStage implements WorkflowStage {
       const updated = buildLensHistoryUpdate(
         findings,
         ctx.state.lensReviewHistory ?? [],
-        ctx.state.ticket?.id ?? "unknown",
+        ctx.state.ticket?.id ?? ctx.state.currentIssue?.id ?? "unknown",
         "PLAN_REVIEW",
       );
       if (updated) stateUpdate.lensReviewHistory = updated;
@@ -323,7 +338,7 @@ export class PlanReviewStage implements WorkflowStage {
             instruction: [
               "# Plan Review Complete",
               "",
-              `Plan for **${ctx.state.ticket?.id}** has been approved after ${roundNum} review round(s).`,
+              `Plan for **${target}** has been approved after ${roundNum} review round(s).`,
               "",
               "Session ending — plan mode is complete.",
             ].join("\n"),
@@ -340,7 +355,7 @@ export class PlanReviewStage implements WorkflowStage {
             instruction: [
               "# Work Session -- Awaiting Plan Approval",
               "",
-              `Plan for **${ctx.state.ticket?.id}** has been approved by automated review after ${roundNum} round(s).`,
+              `Plan for **${target}** has been approved by automated review after ${roundNum} round(s).`,
               "",
               "Surface the plan summary to the human.",
               "If they approve, they should run `/story execute`.",

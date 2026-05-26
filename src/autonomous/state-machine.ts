@@ -7,14 +7,16 @@ import type { WorkflowState } from "./session-types.js";
 const TRANSITIONS: Record<WorkflowState, readonly (WorkflowState | "*")[]> = {
   INIT:          ["PICK_TICKET"],         // start does INIT + LOAD_CONTEXT internally
   LOAD_CONTEXT:  ["PICK_TICKET"],         // internal (never seen by Claude)
-  PICK_TICKET:   ["PLAN", "ISSUE_FIX", "COMPLETE", "SESSION_END", "HANDOVER"],  // COMPLETE for ISS-075 (nothing left to do); HANDOVER for T-328 branch mismatch
+  PICK_TICKET:   ["PLAN", "REPRODUCE_ISSUE", "ISSUE_FIX", "COMPLETE", "SESSION_END", "HANDOVER"],  // COMPLETE for ISS-075 (nothing left to do); HANDOVER for T-328 branch mismatch
+  REPRODUCE_ISSUE: ["PLAN", "HANDOVER"],
   PLAN:          ["PLAN_REVIEW", "HANDOVER"],  // HANDOVER for skip_ticket
   PLAN_REVIEW:   ["IMPLEMENT", "WRITE_TESTS", "PLAN", "PLAN_REVIEW", "PENDING_PLAN_APPROVAL", "SESSION_END", "HANDOVER"],   // approve → IMPLEMENT/WRITE_TESTS, reject → PLAN, stay for next round; work mode pauses at PENDING_PLAN_APPROVAL; SESSION_END for tiered exit; HANDOVER for skip_ticket
   PENDING_PLAN_APPROVAL: ["IMPLEMENT", "WRITE_TESTS", "PLAN", "SESSION_END"],
+  REGRESSION_TEST: ["IMPLEMENT", "HANDOVER"],
   IMPLEMENT:     ["CODE_REVIEW", "TEST", "COMPLETE"],  // TEST when test stage enabled, COMPLETE for no-op tickets (ISS-069)
   WRITE_TESTS:   ["IMPLEMENT", "WRITE_TESTS", "PLAN", "COMPLETE"],  // advance → IMPLEMENT, retry stays, exhaustion → PLAN, no-op → COMPLETE (ISS-069)
   TEST:          ["CODE_REVIEW", "IMPLEMENT", "TEST"],  // pass → CODE_REVIEW, fail → IMPLEMENT, retry
-  CODE_REVIEW:   ["VERIFY", "BUILD", "FINALIZE", "IMPLEMENT", "PLAN", "CODE_REVIEW", "PENDING_SHIP", "SESSION_END", "ISSUE_FIX", "HANDOVER"], // approve → VERIFY/BUILD/FINALIZE, work mode pauses at PENDING_SHIP, reject → IMPLEMENT/PLAN, stay for next round; SESSION_END for tiered exit; T-208: ISSUE_FIX for issue-fix reviews; HANDOVER for skip
+  CODE_REVIEW:   ["VERIFY", "BUILD", "FINALIZE", "IMPLEMENT", "REGRESSION_TEST", "PLAN", "CODE_REVIEW", "PENDING_SHIP", "SESSION_END", "ISSUE_FIX", "HANDOVER"], // approve → VERIFY/BUILD/FINALIZE, work mode pauses at PENDING_SHIP, reject → IMPLEMENT/PLAN, stay for next round; SESSION_END for tiered exit; T-208: ISSUE_FIX for issue-fix reviews; HANDOVER for skip
   PENDING_SHIP:  ["VERIFY", "BUILD", "FINALIZE", "IMPLEMENT", "SESSION_END"],
   VERIFY:        ["BUILD", "FINALIZE", "IMPLEMENT", "VERIFY"],  // pass → BUILD/FINALIZE, fail → IMPLEMENT, retry
   BUILD:         ["FINALIZE", "IMPLEMENT", "BUILD"],  // pass → FINALIZE, fail → IMPLEMENT, retry

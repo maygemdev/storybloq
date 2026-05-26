@@ -27,6 +27,8 @@ export const IssueSchema = z
     createdBy: z.string().nullable().optional(),
     assignedTo: z.string().nullable().optional(),
     lastModifiedBy: z.string().nullable().optional(),
+    // Autonomous session ownership — set when issue is claimed as inprogress.
+    claimedBySession: z.string().nullable().optional(),
   })
   .passthrough();
 

@@ -53,6 +53,20 @@ describe("IssueSchema", () => {
       }
     });
 
+    it("parses optional claimedBySession", () => {
+      const data = {
+        id: "TEST-ISS-098", title: "Claimed issue", status: "inprogress", severity: "high",
+        components: ["core"], impact: "Needs fixing.", resolution: null,
+        location: ["main.ts:1"], discoveredDate: "2026-01-01", resolvedDate: null,
+        relatedTickets: [], claimedBySession: "00000000-0000-0000-0000-000000000001",
+      };
+      const result = IssueSchema.safeParse(data);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.claimedBySession).toBe("00000000-0000-0000-0000-000000000001");
+      }
+    });
+
     it("parses all valid fixture issues", () => {
       for (const file of ["TEST-ISS-001.json", "TEST-ISS-002.json"]) {
         const data = readJson(resolve(fixturesDir, `valid/basic/issues/${file}`));

@@ -54,6 +54,19 @@ function createStoryRepo(branch = "feature/work-mode"): string {
     blockedBy: [],
     parentTicket: null,
   }, null, 2));
+  writeFileSync(join(root, ".story", "issues", "TEST-ISS-001.json"), JSON.stringify({
+    id: "TEST-ISS-001",
+    title: "Test issue",
+    status: "open",
+    severity: "high",
+    components: ["core"],
+    impact: "Issue impact.",
+    resolution: null,
+    location: ["src/index.ts"],
+    discoveredDate: "2026-05-26",
+    resolvedDate: null,
+    relatedTickets: [],
+  }, null, 2));
   writeFileSync(join(root, "README.md"), "# test\n");
   execSync("git init", { cwd: root, stdio: "ignore" });
   execSync("git config user.email test@test.com", { cwd: root, stdio: "ignore" });
@@ -74,6 +87,10 @@ function onlySessionId(root: string): string {
 
 function readState(root: string, sessionId = onlySessionId(root)): Record<string, any> {
   return JSON.parse(readFileSync(join(root, ".story", "sessions", sessionId, "state.json"), "utf-8"));
+}
+
+function readIssue(root: string, id = "TEST-ISS-001"): Record<string, any> {
+  return JSON.parse(readFileSync(join(root, ".story", "issues", `${id}.json`), "utf-8"));
 }
 
 afterEach(() => {
@@ -123,9 +140,172 @@ describe("autonomous guide schema", () => {
     expect(guide).toBeTruthy();
     expect(guide!.inputSchema!.ticketId!.safeParse("T-001").success).toBe(false);
     expect(guide!.inputSchema!.ticketId!.safeParse("TEST-T-001").success).toBe(true);
+    expect(guide!.inputSchema!.issueId!.safeParse("TEST-ISS-001").success).toBe(true);
     const reportSchema = guide!.inputSchema!.report!;
     expect(reportSchema.safeParse({ completedAction: "ticket_picked", ticketId: "T-001" }).success).toBe(false);
     expect(reportSchema.safeParse({ completedAction: "ticket_picked", ticketId: "TEST-T-001" }).success).toBe(true);
+  });
+});
+
+describe("work mode issue flow", () => {
+  it("starts issue work with reproduction, gates the plan, and pauses at ship after resolution", async () => {
+    const root = createStoryRepo();
+    const start = await handleAutonomousGuide(root, {
+      sessionId: null,
+      action: "start",
+      mode: "work",
+      issueId: "TEST-ISS-001",
+    });
+    expect(start.isError, start.content[0]!.text).not.toBe(true);
+    const sessionId = onlySessionId(root);
+    expect(readState(root, sessionId)).toMatchObject({
+      mode: "work",
+      state: "REPRODUCE_ISSUE",
+      currentIssue: { id: "TEST-ISS-001" },
+      work: { pinnedBranch: "feature/work-mode" },
+    });
+    expect(readIssue(root)).toMatchObject({
+      status: "inprogress",
+      claimedBySession: sessionId,
+    });
+
+    const reproduced = await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: {
+        completedAction: "issue_reproduced",
+        reproduction: {
+          applicable: true,
+          testPaths: ["test/repro.test.ts"],
+          command: "npm test -- test/repro.test.ts",
+          failureSummary: "fails before the fix",
+        },
+      },
+    });
+    expect(reproduced.isError).not.toBe(true);
+    expect(readState(root, sessionId)).toMatchObject({
+      state: "PLAN",
+      work: {
+        reproduction: {
+          applicable: true,
+          command: "npm test -- test/repro.test.ts",
+        },
+      },
+    });
+
+    writeFileSync(join(root, ".story", "sessions", sessionId, "plan.md"), "# Plan\n\nFix the issue.\n");
+    await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: { completedAction: "plan_written" },
+    });
+    const planApproved = await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: { completedAction: "plan_review_round", verdict: "approve", findings: [] },
+    });
+    expect(planApproved.content[0]!.text).toContain("Awaiting Plan Approval");
+    expect(readState(root, sessionId).state).toBe("PENDING_PLAN_APPROVAL");
+
+    const execute = await handleAutonomousGuide(root, { sessionId, action: "execute" });
+    expect(execute.isError).not.toBe(true);
+    expect(readState(root, sessionId).state).toBe("IMPLEMENT");
+
+    writeFileSync(join(root, "fix.txt"), "fixed\n");
+    writeFileSync(join(root, ".story", "issues", "TEST-ISS-001.json"), JSON.stringify({
+      ...readIssue(root),
+      status: "resolved",
+      resolution: "Fixed by updating the implementation.",
+      resolvedDate: "2026-05-26",
+    }, null, 2));
+    await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: { completedAction: "implementation_done" },
+    });
+    const codeApproved = await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: { completedAction: "code_review_round", verdict: "approve", findings: [] },
+    });
+    expect(codeApproved.content[0]!.text).toContain("Ready to Ship");
+    expect(readState(root, sessionId).state).toBe("PENDING_SHIP");
+  });
+
+  it("routes functional work-mode review findings through regression test first", async () => {
+    const root = createStoryRepo();
+    const start = await handleAutonomousGuide(root, {
+      sessionId: null,
+      action: "start",
+      mode: "work",
+      ticketId: "TEST-T-001",
+    });
+    expect(start.isError).not.toBe(true);
+    const sessionId = onlySessionId(root);
+    writeFileSync(join(root, ".story", "sessions", sessionId, "plan.md"), "# Plan\n\nDo the thing.\n");
+    await handleAutonomousGuide(root, { sessionId, action: "report", report: { completedAction: "plan_written" } });
+    await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: { completedAction: "plan_review_round", verdict: "approve", findings: [] },
+    });
+    await handleAutonomousGuide(root, { sessionId, action: "execute" });
+    writeFileSync(join(root, "feature.txt"), "implemented\n");
+    await handleAutonomousGuide(root, { sessionId, action: "report", report: { completedAction: "implementation_done" } });
+
+    const review = await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: {
+        completedAction: "code_review_round",
+        verdict: "request_changes",
+        findings: [{
+          id: "F-1",
+          severity: "major",
+          category: "validation",
+          description: "Input validation accepts invalid data.",
+          disposition: "open",
+        }],
+      },
+    });
+    expect(review.content[0]!.text).toContain("Add Regression Test");
+    expect(readState(root, sessionId).state).toBe("REGRESSION_TEST");
+
+    await handleAutonomousGuide(root, {
+      sessionId,
+      action: "report",
+      report: {
+        completedAction: "regression_test_written",
+        regressionTest: {
+          applicable: true,
+          testPaths: ["test/regression.test.ts"],
+          command: "npm test -- test/regression.test.ts",
+          failureSummary: "fails on invalid data",
+        },
+      },
+    });
+    expect(readState(root, sessionId)).toMatchObject({
+      state: "IMPLEMENT",
+      work: { regressionTest: { command: "npm test -- test/regression.test.ts" } },
+    });
+  });
+
+  it("cancel restores an owned in-progress issue claim", async () => {
+    const root = createStoryRepo();
+    await handleAutonomousGuide(root, {
+      sessionId: null,
+      action: "start",
+      mode: "work",
+      issueId: "TEST-ISS-001",
+    });
+    const sessionId = onlySessionId(root);
+
+    const cancel = await handleAutonomousGuide(root, { sessionId, action: "cancel" });
+    expect(cancel.isError).not.toBe(true);
+    expect(readIssue(root)).toMatchObject({
+      status: "open",
+      claimedBySession: null,
+    });
   });
 });
 
