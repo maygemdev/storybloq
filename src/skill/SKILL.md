@@ -21,7 +21,7 @@ Invocation differs by client: use `/story` in Claude Code, `$story` in Codex, `/
 
 ## Step 0.5: Active session guard (runs BEFORE argument routing)
 
-This guard runs on EVERY `/story` invocation regardless of subcommand (`/story`, `/story auto`, `/story review`, `/story plan`, `/story guided`, `/story handover`, `/story snapshot`, `/story export`, `/story design`, `/story review-lenses`, `/story settings`, `/story help`, `/story status`, etc.). It MUST complete before ANY other action in this invocation.
+This guard runs on EVERY `/story` invocation regardless of subcommand (`/story`, `/story auto`, `/story start`, `/story execute`, `/story ship`, `/story review`, `/story plan`, `/story guided`, `/story handover`, `/story snapshot`, `/story export`, `/story design`, `/story review-lenses`, `/story settings`, `/story help`, `/story status`, etc.). It MUST complete before ANY other action in this invocation.
 
 **Guard prelude for Claude/Codex MCP clients: force-surface deferred MCP tools.** Before running step 1 of this guard in Claude/Codex MCP clients, make a single `ToolSearch` call with `query: "storybloq"` (max_results: 20). On Claude Code desktop/web, `storybloq_*` tool schemas are deferred — without this prelude the subsequent `storybloq_status` call in step 1 is not dispatchable. In Pi, skip this prelude because Storybloq tools are native extension tools, not MCP tools. The prelude is explicitly part of the guard, not a separate pre-guard step; it satisfies the whitelist below.
 
@@ -32,6 +32,7 @@ This guard runs on EVERY `/story` invocation regardless of subcommand (`/story`,
 
 1. Call `storybloq_status` once. If the output contains a `## Active Sessions` heading, OR any subsequent guide call in this invocation fails with an "existing session" / "resumable session" error, you must STOP and surface the situation to the user:
    - Extract for each surfaced session: the **full `sessionId`** (required for every guide call), plus state, mode, and ticket (if any). Derive the displayed token `<T>` from the full `sessionId` per the Step 3 definition. If `storybloq_status` exposes only a truncated/rendered ID and no way to recover the full `sessionId` for a surfaced session (and the guide-error fallback in Step 3 also does not name a full `sessionId`), STOP. Do NOT offer Resume or Cancel. Tell the user: "A session appears to be active but its full `sessionId` cannot be recovered from the skill's tools. Please inspect `.story/sessions/` or run `storybloq session list` before retrying."
+   - **Work-mode gate exception:** If this invocation is exactly `/story execute` and exactly one active work session is in `PENDING_PLAN_APPROVAL`, call `storybloq_autonomous_guide` with `{ "sessionId": "<full-sessionId>", "action": "execute" }` instead of showing the generic Resume/Cancel question. If this invocation is exactly `/story ship` and exactly one active work session is in `PENDING_SHIP`, call the guide with `{ "sessionId": "<full-sessionId>", "action": "ship" }`. If the user provided free-form feedback while exactly one active work session is in `PENDING_PLAN_APPROVAL` or `PENDING_SHIP`, call the guide with `{ "sessionId": "<full-sessionId>", "action": "revise", "feedback": "<user message>" }`. The guide validates branch pinning and state before mutating.
    - Render one **Active Autonomous Session** block per session (format defined in Step 3).
    - End with the session-aware `AskUserQuestion` defined in Step 3.
    - Until the user chooses, no other action is permitted (see whitelist semantics above).
@@ -49,9 +50,12 @@ This guard has precedence over every "do not ask the user" rule elsewhere in thi
 
 - `/story` -> full context load (default, see Step 2 below)
 - `/story auto` -> start autonomous mode (read `autonomous-mode.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
-- `/story auto T-183 T-184 ISS-077` -> start targeted autonomous mode with ONLY those items in order (read `autonomous-mode.md`; pass the IDs as `targetWork` array in the start call)
-- `/story review T-XXX` -> start review mode for a ticket (read `autonomous-mode.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
-- `/story plan T-XXX` -> start plan mode for a ticket (read `autonomous-mode.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
+- `/story auto DEV01-T-183 DEV01-T-184 DEV01-ISS-077` -> start targeted autonomous mode with ONLY those items in order (read `autonomous-mode.md`; pass the IDs as `targetWork` array in the start call)
+- `/story start {NS}-T-XXX` -> start human-gated work mode for one ticket (read `autonomous-mode.md`; call guide start with `mode: "work"`)
+- `/story execute` -> approve the plan for the active work session (read `autonomous-mode.md`; call guide with `action: "execute"`)
+- `/story ship` -> approve code for the active work session and finalize/commit (read `autonomous-mode.md`; call guide with `action: "ship"`)
+- `/story review {NS}-T-XXX` -> start review mode for a ticket (read `autonomous-mode.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
+- `/story plan {NS}-T-XXX` -> start plan mode for a ticket (read `autonomous-mode.md` in the same directory as this skill file; if not found, tell user to run `storybloq setup --client all`)
 - `/story handover` -> draft a session handover. Summarize the session's work, then call `storybloq_handover_create` with the drafted content and a descriptive slug
 - `/story snapshot` -> save project state (call `storybloq_snapshot` MCP tool)
 - `/story export` -> export project for sharing. Ask the user whether to export the current phase or the full project, then call `storybloq_export` with either `phase` or `all` set
@@ -158,9 +162,9 @@ You MUST show the following tables after the prose intro. Do not summarize them 
 ## Ready to Work
 | Ticket | Title                              | Phase      |
 |--------|-----------------------------------|------------|
-| T-001  | Project setup                     | foundation |
-| T-011  | Rate agreement conditions schema  | foundation |
-| T-012  | Audit trail infrastructure        | foundation |
+| DEV01-T-001  | Project setup                     | foundation |
+| DEV01-T-011  | Rate agreement conditions schema  | foundation |
+| DEV01-T-012  | Audit trail infrastructure        | foundation |
 ```
 
 Show up to 5 unblocked tickets. If more exist, note "(+N more unblocked)".
@@ -170,7 +174,7 @@ Show up to 5 unblocked tickets. If more exist, note "(+N more unblocked)".
 ```
 ## Decisions Pending
 - PDF generation: managed service vs pure-JS (affects T-030)
-- Background jobs: Inngest vs Trigger.dev vs Vercel Cron (affects T-001)
+- Background jobs: Inngest vs Trigger.dev vs Vercel Cron (affects DEV01-T-001)
 ```
 
 **Open Issues** (show only if issues exist with status "open"):
@@ -179,7 +183,7 @@ Show up to 5 unblocked tickets. If more exist, note "(+N more unblocked)".
 ## Open Issues
 | Issue    | Title                  | Severity |
 |----------|------------------------|----------|
-| ISS-001  | Auth token expiry bug  | high     |
+| DEV01-ISS-001  | Auth token expiry bug  | high     |
 ```
 
 **Key Rules** (from lessons digest or RULES.md -- brief one-line callout, not a full list):
@@ -190,9 +194,10 @@ Example: "Rules: integer cents for money, billing engine is pure logic, TDD for 
 
 ```
 Tip: You can also use these modes anytime:
-  /story auto T-XXX ISS-YYY  Autonomous mode scoped to specific tickets/issues
-  /story review T-XXX        Review code you already wrote
-  /story plan T-XXX          Plan a ticket with review rounds
+  /story start {NS}-T-XXX    Human-gated work mode for one ticket
+  /story auto {NS}-T-XXX {NS}-ISS-YYY  Autonomous mode scoped to specific tickets/issues
+  /story review {NS}-T-XXX   Review code you already wrote
+  /story plan {NS}-T-XXX     Plan a ticket with review rounds
   /story design              Evaluate frontend against platform best practices
   /story review-lenses       Run multi-lens review on current plan or diff
 ```
@@ -222,6 +227,25 @@ Render ONLY:
 ```
 ## Active Autonomous Session
 Session `<T>` is running in <state> state, ticket <ticketId>: <title> (or "no ticket").
+```
+
+For work-mode sessions, use these state-specific banners instead:
+
+```
+## Work Session -- Awaiting Plan Approval
+Session: <T>  |  Ticket: DEV01-T-012  |  Branch: feature/xxx
+Plan ready for review. Run /story execute to approve, or provide feedback to revise.
+```
+
+```
+## Work Session -- Ready to Ship
+Session: <T>  |  Ticket: DEV01-T-012  |  Branch: feature/xxx
+Code reviewed and approved. Run /story ship to commit, or provide feedback to revise.
+```
+
+```
+## Work Session -- In Progress
+Session: <T>  |  Ticket: DEV01-T-012  |  Branch: feature/xxx  |  Stage: IMPLEMENT
 ```
 
    (Where `<T>` is the session token defined at the top of Step 3.)
@@ -309,7 +333,7 @@ Ticket and issue create/update operations are available via both CLI and MCP too
 
 CLI examples:
 - `storybloq ticket create --title "..." --type task --phase p0`
-- `storybloq ticket update T-001 --status complete`
+- `storybloq ticket update DEV01-T-001 --status complete`
 - `storybloq issue create --title "..." --severity high --impact "..."`
 
 MCP examples:

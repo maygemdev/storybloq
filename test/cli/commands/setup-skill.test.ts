@@ -334,10 +334,11 @@ describe("setup-skill", () => {
   it("autonomous-mode.md contains autonomous and tiered mode sections", async () => {
     const content = await readFile(join(PROJECT_ROOT, "src", "skill", "autonomous-mode.md"), "utf-8");
     expect(content).toContain("## Autonomous Mode");
+    expect(content).toContain("## Human-Gated Work Mode");
     expect(content).toContain("storybloq_autonomous_guide");
-    expect(content).toContain("### `/story review T-XXX`");
-    expect(content).toContain("### `/story plan T-XXX`");
-    expect(content).toContain("### `/story guided T-XXX`");
+    expect(content).toContain("### `/story review {NS}-T-XXX`");
+    expect(content).toContain("### `/story plan {NS}-T-XXX`");
+    expect(content).toContain("### `/story guided {NS}-T-XXX`");
   });
 
   it("SKILL.md no longer contains extracted sections inline", async () => {

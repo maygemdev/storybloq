@@ -6,6 +6,7 @@ import {
   type GuideInput,
   type GuideOutput,
   type FullSessionState,
+  type GitResult,
   type SessionSummary,
   type WorkflowState,
 } from "./session-types.js";
@@ -60,7 +61,7 @@ import { writeResumeMarker, removeResumeMarker } from "./resume-marker.js";
 import { refreshStatusForSession, isSessionActiveForStatus } from "./status-writer.js";
 import { formatCompactReport } from "../core/session-report-formatter.js";
 import { isTargetedMode, getRemainingTargets, buildTargetedCandidatesText, buildTargetedPickInstruction, buildTargetedStuckHandover } from "./target-work.js";
-import { detectBranchAffinity, buildAffinityAnnotation } from "./branch-affinity.js";
+import { detectBranchAffinity, buildAffinityAnnotation, isProtectedBranch } from "./branch-affinity.js";
 import {
   handleHandoverLatest,
   handleHandoverCreate,
@@ -95,6 +96,7 @@ export const RECOVERY_MAPPING: Readonly<Record<string, { state: string; resetPla
   COMPLETE:       { state: "PICK_TICKET", resetPlan: false, resetCode: false },
   HANDOVER:       { state: "SESSION_END", resetPlan: false, resetCode: false },
   PLAN:           { state: "PLAN",        resetPlan: true,  resetCode: false },
+  PENDING_PLAN_APPROVAL: { state: "PENDING_PLAN_APPROVAL", resetPlan: false, resetCode: false },
   IMPLEMENT:      { state: "PLAN",        resetPlan: true,  resetCode: false },
   WRITE_TESTS:    { state: "PLAN",        resetPlan: true,  resetCode: false },
   BUILD:          { state: "IMPLEMENT",   resetPlan: false, resetCode: true  },
@@ -102,6 +104,7 @@ export const RECOVERY_MAPPING: Readonly<Record<string, { state: string; resetPla
   PLAN_REVIEW:    { state: "PLAN",        resetPlan: true,  resetCode: true  },
   TEST:           { state: "IMPLEMENT",   resetPlan: false, resetCode: true  },
   CODE_REVIEW:    { state: "PLAN",        resetPlan: true,  resetCode: true  },
+  PENDING_SHIP:   { state: "PENDING_SHIP", resetPlan: false, resetCode: false },
   FINALIZE:       { state: "IMPLEMENT",   resetPlan: false, resetCode: true  },
   LESSON_CAPTURE: { state: "PICK_TICKET", resetPlan: false, resetCode: false },
   ISSUE_FIX:      { state: "ISSUE_FIX",   resetPlan: false, resetCode: false },  // T-208: self-recover to avoid dangling currentIssue
@@ -508,6 +511,12 @@ async function handleGuideInner(root: string, args: GuideInput): Promise<McpTool
       return handlePreCompact(root, args);
     case "cancel":
       return handleCancel(root, args);
+    case "execute":
+      return handleExecute(root, args);
+    case "ship":
+      return handleShip(root, args);
+    case "revise":
+      return handleRevise(root, args);
     default:
       return guideError(new Error(`Unknown action: ${args.action}`));
   }
@@ -691,7 +700,7 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
   // Non-auto modes require ticketId
   if (mode !== "auto" && !args.ticketId) {
     return guideError(new Error(
-      `Mode "${mode}" requires a ticketId. Call with: { "action": "start", "mode": "${mode}", "ticketId": "T-XXX" }`,
+      `Mode "${mode}" requires a ticketId. Call with: { "action": "start", "mode": "${mode}", "ticketId": "{NS}-T-XXX" }`,
     ));
   }
 
@@ -730,7 +739,7 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
     }
     if (invalidIds.length > 0) {
       return guideError(new Error(
-        `Invalid target IDs: ${invalidIds.join(", ")}. Use T-XXX for tickets or ISS-XXX for issues.`,
+        `Invalid target IDs: ${invalidIds.join(", ")}. Use {NS}-T-XXX for tickets or {NS}-ISS-XXX for issues.`,
       ));
     }
     validatedTargetWork = [...new Set(rawTargetWork.filter(id => !alreadyDone.includes(id)))];
@@ -769,6 +778,11 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
     sessionConfig.maxTicketsPerSession = 1;
   }
 
+  // Work mode: one human-gated ticket per session.
+  if (mode === "work") {
+    sessionConfig.maxTicketsPerSession = 1;
+  }
+
   // T-188: Targeted mode: cap = target count (safety net; remaining-count is authoritative)
   if (validatedTargetWork.length > 0) {
     sessionConfig.maxTicketsPerSession = validatedTargetWork.length;
@@ -783,6 +797,37 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
     stages: sessionConfig.stageOverrides,
     branchStrategy: sessionConfig.branchStrategy,
   });
+
+  // ADR 0002: protected branch guard for auto and work mode before any session
+  // directory is created. Exact branch matches only.
+  let preflightHead: Awaited<ReturnType<typeof gitHead>> | null = null;
+  if (mode === "auto" || mode === "work") {
+    preflightHead = await gitHead(root);
+    if (!preflightHead.ok) {
+      return guideError(new Error("This directory is not a git repository or git is not available. Autonomous mode requires git."));
+    }
+    const branch = preflightHead.data.branch;
+    if (isProtectedBranch(branch)) {
+      return guideError(new Error(
+        `Cannot start a work session on protected branch '${branch}'.\n` +
+        "Switch to a feature branch first.",
+      ));
+    }
+  }
+
+  // Work mode is intentionally strict: the user owns the gate decisions, so
+  // start from a clean tree and do not auto-stash pre-existing edits.
+  if (mode === "work") {
+    const cleanStatus = await gitStatus(root);
+    if (!cleanStatus.ok) {
+      return guideError(new Error(`Cannot inspect worktree status: ${cleanStatus.message}`));
+    }
+    if (cleanStatus.data.length > 0) {
+      return guideError(new Error(
+        `Cannot start: work mode requires a clean worktree. Commit or stash these changes first:\n${cleanStatus.data.join("\n")}`,
+      ));
+    }
+  }
 
   // T-183: Clean stale resume marker before creating a new session
   removeResumeMarker(root);
@@ -804,7 +849,7 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
 
   try {
     // Check git state
-    const headResult = await gitHead(root);
+    const headResult = preflightHead ?? await gitHead(root);
     if (!headResult.ok) {
       abortSession();
       return guideError(new Error("This directory is not a git repository or git is not available. Autonomous mode requires git."));
@@ -1102,7 +1147,7 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
       } else if (mode === "plan") {
         entryState = "PLAN";
       } else {
-        // guided — enters at PLAN like auto, but maxTickets=1 already set
+        // guided/work — enter at PLAN; both are single-ticket flows.
         entryState = "PLAN";
       }
 
@@ -1117,6 +1162,13 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
           risk: assessRisk(ticket).risk,
           claimed: true,
         },
+        work: mode === "work"
+          ? {
+              pinnedBranch: headResult.data.branch,
+              changedFiles: [],
+              shipChangePolicy: null,
+            }
+          : updated.work,
       };
 
       updated = refreshLease(updated);
@@ -1136,6 +1188,7 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
         review: "Review Mode",
         plan: "Plan Mode",
         guided: "Guided Mode",
+        work: "Work Mode",
       };
 
       // Build mode-specific instruction
@@ -1181,6 +1234,11 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
             "Do NOT use Claude Code's plan mode — write plans as markdown files.",
             "This is guided mode — single ticket, full pipeline.",
           ]
+        : mode === "work"
+          ? [
+              "Do NOT use Claude Code's plan mode — write plans as markdown files.",
+              "This is work mode — pause at plan approval, then pause again before commit.",
+            ]
         : [
             `This is ${mode} mode — session ends after ${mode === "review" ? "code review approval" : "plan review approval"}.`,
           ];
@@ -1319,7 +1377,7 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
       '```json',
       topCandidate
         ? `{ "sessionId": "${updated.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${topCandidate.ticket.id}" } }`
-        : `{ "sessionId": "${updated.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "T-XXX" } }`,
+        : `{ "sessionId": "${updated.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "{NS}-T-XXX" } }`,
       '```',
       ...(hasHighIssues ? [
         "",
@@ -1528,6 +1586,235 @@ async function runPipelineStage(
   const result = await processAdvance(ctx, stage, advance);
   try { refreshStatusForSession(root, dir, ctx.state, "guide"); } catch { /* best-effort */ }
   return result;
+}
+
+function parsePorcelainPath(line: string): string | null {
+  if (line.length < 4) return null;
+  const raw = line.slice(3).trim();
+  if (!raw) return null;
+  const arrow = raw.indexOf(" -> ");
+  return arrow >= 0 ? raw.slice(arrow + 4).trim() : raw;
+}
+
+function isManagedSessionPath(filePath: string): boolean {
+  return filePath.startsWith(".story/sessions/") || filePath === ".story/status.json";
+}
+
+async function currentWorktreeChangedFiles(root: string, mergeBase?: string | null): Promise<GitResult<string[]>> {
+  const files = new Set<string>();
+
+  const status = await gitStatus(root);
+  if (!status.ok) return status;
+  for (const line of status.data) {
+    const filePath = parsePorcelainPath(line);
+    if (filePath && !isManagedSessionPath(filePath)) files.add(filePath);
+  }
+
+  if (mergeBase) {
+    const diffNames = await gitDiffNames(root, mergeBase);
+    if (diffNames.ok) {
+      for (const filePath of diffNames.data) {
+        if (!isManagedSessionPath(filePath)) files.add(filePath);
+      }
+    }
+  }
+
+  return { ok: true, data: [...files].sort() };
+}
+
+async function validateWorkPinnedBranch(root: string, state: FullSessionState): Promise<McpToolResult | null> {
+  const pinned = state.work?.pinnedBranch ?? state.git?.branch ?? null;
+  const head = await gitHead(root);
+  if (!head.ok) {
+    return guideError(new Error(`Cannot validate git branch: ${head.message}`));
+  }
+  const current = head.data.branch;
+  if (pinned && current !== pinned) {
+    return guideError(new Error(
+      `This work session is pinned to branch '${pinned}'.\n` +
+      `You are currently on '${current ?? "detached HEAD"}'. Switch back to continue.`,
+    ));
+  }
+  return null;
+}
+
+async function transitionFromWorkGate(
+  root: string,
+  dir: string,
+  state: FullSessionState,
+  fromPipelineStage: "PLAN_REVIEW" | "CODE_REVIEW",
+): Promise<McpToolResult> {
+  const recipe = resolveRecipeFromState(state);
+  const ctx = new StageContext(root, dir, state, recipe);
+  const next = findNextStage(recipe.pipeline, fromPipelineStage, ctx);
+
+  if (next.kind === "unregistered") {
+    assertTransition(state.state as WorkflowState, next.id as WorkflowState);
+    ctx.writeState({ state: next.id, previousState: state.state }, { refreshStatus: true });
+    return guideResult(ctx.state, next.id, {
+      instruction: `Transitioned to ${next.id}. Report back to continue.`,
+      reminders: [],
+      transitionedFrom: state.state,
+    });
+  }
+
+  if (next.kind === "exhausted") {
+    return guideError(new Error(`Cannot continue work session: pipeline exhausted after ${fromPipelineStage}.`));
+  }
+
+  assertTransition(state.state as WorkflowState, next.stage.id as WorkflowState);
+  ctx.writeState({ state: next.stage.id, previousState: state.state }, { refreshStatus: true });
+  ctx.appendEvent("transition", { from: state.state, to: next.stage.id, action: "work_gate" });
+  writeCheckpoint(ctx.dir, next.stage.id, ctx.state as unknown as Record<string, unknown>, ctx.state.revision);
+  const enterResult = await next.stage.enter(ctx);
+  if (isStageAdvance(enterResult)) return processAdvance(ctx, next.stage, enterResult);
+  return guideResult(ctx.state, next.stage.id, enterResult);
+}
+
+async function handleExecute(root: string, args: GuideInput): Promise<McpToolResult> {
+  if (!args.sessionId) return guideError(new Error("sessionId is required for execute action"));
+  const info = findSessionById(root, args.sessionId);
+  if (!info) return guideError(new Error(`Session ${args.sessionId} not found`));
+  let state = refreshLease(info.state);
+  state = await recoverPendingMutation(info.dir, state, root);
+
+  if (state.mode !== "work") {
+    return guideError(new Error(`Session ${args.sessionId} is not a work session (mode: ${state.mode}).`));
+  }
+  if (state.state !== "PENDING_PLAN_APPROVAL") {
+    return guideError(new Error(`Session ${args.sessionId} is not awaiting plan approval (current: ${state.state}).`));
+  }
+  const branchError = await validateWorkPinnedBranch(root, state);
+  if (branchError) return branchError;
+
+  appendEvent(info.dir, {
+    rev: state.revision,
+    type: "work_plan_approved",
+    timestamp: new Date().toISOString(),
+    data: { ticketId: state.ticket?.id ?? null },
+  });
+
+  return transitionFromWorkGate(root, info.dir, state, "PLAN_REVIEW");
+}
+
+async function handleShip(root: string, args: GuideInput): Promise<McpToolResult> {
+  if (!args.sessionId) return guideError(new Error("sessionId is required for ship action"));
+  const info = findSessionById(root, args.sessionId);
+  if (!info) return guideError(new Error(`Session ${args.sessionId} not found`));
+  let state = refreshLease(info.state);
+  state = await recoverPendingMutation(info.dir, state, root);
+
+  if (state.mode !== "work") {
+    return guideError(new Error(`Session ${args.sessionId} is not a work session (mode: ${state.mode}).`));
+  }
+  if (state.state !== "PENDING_SHIP") {
+    return guideError(new Error(`Session ${args.sessionId} is not ready to ship (current: ${state.state}).`));
+  }
+  const branchError = await validateWorkPinnedBranch(root, state);
+  if (branchError) return branchError;
+
+  const currentFiles = await currentWorktreeChangedFiles(root, state.git.mergeBase);
+  if (!currentFiles.ok) return guideError(new Error(`Cannot inspect worktree changes: ${currentFiles.message}`));
+  const sessionFiles = new Set(state.work?.changedFiles ?? []);
+  const extraFiles = currentFiles.data.filter((filePath) => !sessionFiles.has(filePath));
+  const policy = args.shipChangePolicy ?? state.work?.shipChangePolicy ?? null;
+
+  if (extraFiles.length > 0 && !policy) {
+    const written = writeSessionAndRefresh(root, info.dir, state, "if-active");
+    return guideResult(written, "PENDING_SHIP", {
+      instruction: [
+        "# Work Session -- Extra Changes Detected",
+        "",
+        "The worktree contains changes not produced by this session:",
+        ...extraFiles.map((filePath) => `- ${filePath}`),
+        "",
+        "Ask the user whether to include all changes or only session changes.",
+        "",
+        "Then call `storybloq_autonomous_guide` with:",
+        "```json",
+        `{ "sessionId": "${state.sessionId}", "action": "ship", "shipChangePolicy": "<all|session-only>" }`,
+        "```",
+      ].join("\n"),
+      reminders: ["Do not proceed to commit until the user chooses all changes or session changes only."],
+    });
+  }
+
+  const updated = writeSessionAndRefresh(root, info.dir, {
+    ...state,
+    work: {
+      pinnedBranch: state.work?.pinnedBranch ?? state.git.branch ?? null,
+      changedFiles: state.work?.changedFiles ?? [],
+      shipChangePolicy: policy,
+    },
+  } as FullSessionState, "if-active");
+  appendEvent(info.dir, {
+    rev: updated.revision,
+    type: "work_ship_approved",
+    timestamp: new Date().toISOString(),
+    data: { ticketId: updated.ticket?.id ?? null, shipChangePolicy: policy ?? "session-only" },
+  });
+
+  return transitionFromWorkGate(root, info.dir, updated, "CODE_REVIEW");
+}
+
+async function handleRevise(root: string, args: GuideInput): Promise<McpToolResult> {
+  if (!args.sessionId) return guideError(new Error("sessionId is required for revise action"));
+  if (!args.feedback?.trim()) return guideError(new Error("feedback is required for revise action"));
+  const info = findSessionById(root, args.sessionId);
+  if (!info) return guideError(new Error(`Session ${args.sessionId} not found`));
+  let state = refreshLease(info.state);
+  state = await recoverPendingMutation(info.dir, state, root);
+
+  if (state.mode !== "work") {
+    return guideError(new Error(`Session ${args.sessionId} is not a work session (mode: ${state.mode}).`));
+  }
+  if (state.state !== "PENDING_PLAN_APPROVAL" && state.state !== "PENDING_SHIP") {
+    return guideError(new Error(`Session ${args.sessionId} is not waiting at a work gate (current: ${state.state}).`));
+  }
+  const branchError = await validateWorkPinnedBranch(root, state);
+  if (branchError) return branchError;
+
+  const target = state.state === "PENDING_PLAN_APPROVAL" ? "PLAN" : "IMPLEMENT";
+  assertTransition(state.state as WorkflowState, target);
+  const written = writeSessionAndRefresh(root, info.dir, {
+    ...state,
+    state: target,
+    previousState: state.state,
+    work: {
+      pinnedBranch: state.work?.pinnedBranch ?? state.git.branch ?? null,
+      changedFiles: state.state === "PENDING_SHIP" ? [] : (state.work?.changedFiles ?? []),
+      shipChangePolicy: null,
+    },
+  } as FullSessionState, "if-active");
+  appendEvent(info.dir, {
+    rev: written.revision,
+    type: "work_revision_requested",
+    timestamp: new Date().toISOString(),
+    data: { gate: state.state, feedback: args.feedback },
+  });
+
+  const recipe = resolveRecipeFromState(written);
+  const ctx = new StageContext(root, info.dir, written, recipe);
+  const stage = getStage(target);
+  if (!stage) return guideError(new Error(`Stage "${target}" is not registered.`));
+  const enterResult = await stage.enter(ctx);
+  if (isStageAdvance(enterResult)) return processAdvance(ctx, stage, enterResult);
+  const feedbackHeader = [
+    `# Work Session Revision -- ${target === "PLAN" ? "Plan" : "Implementation"}`,
+    "",
+    "Incorporate this human feedback:",
+    "",
+    args.feedback.trim(),
+    "",
+    "---",
+    "",
+    enterResult.instruction,
+  ].join("\n");
+  return guideResult(ctx.state, target, {
+    instruction: feedbackHeader,
+    reminders: enterResult.reminders,
+    transitionedFrom: state.state,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -1776,7 +2063,7 @@ async function handleResume(root: string, args: GuideInput): Promise<McpToolResu
           '```json',
           topCandidate
             ? `{ "sessionId": "${driftWritten.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${topCandidate.ticket.id}" } }`
-            : `{ "sessionId": "${driftWritten.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "T-XXX" } }`,
+            : `{ "sessionId": "${driftWritten.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "{NS}-T-XXX" } }`,
           '```',
         ].join("\n"),
         reminders: ["Do NOT stop. Pick a ticket immediately."],
@@ -1937,7 +2224,7 @@ async function handleResume(root: string, args: GuideInput): Promise<McpToolResu
         '```json',
         topCandidate
           ? `{ "sessionId": "${written.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${topCandidate.ticket.id}" } }`
-          : `{ "sessionId": "${written.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "T-XXX" } }`,
+          : `{ "sessionId": "${written.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "{NS}-T-XXX" } }`,
         '```',
       ].join("\n"),
       reminders: [
@@ -2123,7 +2410,7 @@ async function handleCancel(root: string, args: GuideInput): Promise<McpToolResu
           "",
           "Continue working by calling `storybloq_autonomous_guide` with:",
           '```json',
-          `{ "sessionId": "${info.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "T-XXX" } }`,
+          `{ "sessionId": "${info.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "{NS}-T-XXX" } }`,
           '```',
           "",
           "To force-cancel (admin only), run: `storybloq session stop`",

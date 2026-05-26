@@ -60,7 +60,7 @@ export interface SessionConfig {
   compactThreshold?: string;
   reviewBackends?: string[];
   codexReviewBackends?: string[];
-  mode?: "auto" | "review" | "plan" | "guided";
+  mode?: "auto" | "review" | "plan" | "guided" | "work";
   handoverInterval?: number;
   stageOverrides?: Record<string, Record<string, unknown>>;
   branchStrategy?: "none" | "per-ticket";

@@ -23,10 +23,12 @@ export type WorkflowState =
   | "PICK_TICKET"
   | "PLAN"
   | "PLAN_REVIEW"
+  | "PENDING_PLAN_APPROVAL"
   | "IMPLEMENT"
   | "WRITE_TESTS"
   | "TEST"
   | "CODE_REVIEW"
+  | "PENDING_SHIP"
   | "BUILD"
   | "VERIFY"
   | "FINALIZE"
@@ -69,6 +71,11 @@ const IDLE_STATES: ReadonlySet<string> = new Set([
   "SESSION_END",
 ]);
 
+const WAITING_STATES: ReadonlySet<string> = new Set([
+  "PENDING_PLAN_APPROVAL",
+  "PENDING_SHIP",
+]);
+
 /**
  * Derives Claude's operational status from workflow state.
  * Pure function, no I/O.
@@ -79,6 +86,7 @@ export function deriveClaudeStatus(
 ): ClaudeStatus {
   if (waitingForRetry) return "waiting";
   if (!state) return "idle";
+  if (WAITING_STATES.has(state)) return "waiting";
   if (WORKING_STATES.has(state)) return "working";
   if (IDLE_STATES.has(state)) return "idle";
   return "unknown";
@@ -256,8 +264,8 @@ export type StatusPayload = StatusPayloadActive | StatusPayloadInactive;
 
 export const WORKFLOW_STATES = [
   "INIT", "LOAD_CONTEXT", "PICK_TICKET",
-  "PLAN", "PLAN_REVIEW",
-  "IMPLEMENT", "WRITE_TESTS", "TEST", "CODE_REVIEW", "BUILD", "VERIFY",
+  "PLAN", "PLAN_REVIEW", "PENDING_PLAN_APPROVAL",
+  "IMPLEMENT", "WRITE_TESTS", "TEST", "CODE_REVIEW", "PENDING_SHIP", "BUILD", "VERIFY",
   "FINALIZE", "COMPACT",
   "HANDOVER", "COMPLETE", "LESSON_CAPTURE", "ISSUE_FIX", "ISSUE_SWEEP", "SESSION_END",
 ] as const;
@@ -354,7 +362,7 @@ export const SessionStateSchema = z.object({
   previousState: z.string().optional(),
   revision: z.number().int().min(0),
   status: z.enum(["active", "completed", "superseded"]).default("active"),
-  mode: z.enum(["auto", "review", "plan", "guided"]).default("auto"),
+  mode: z.enum(["auto", "review", "plan", "guided", "work"]).default("auto"),
 
   // Ticket in progress
   ticket: z.object({
@@ -560,6 +568,13 @@ export const SessionStateSchema = z.object({
   // T-188: Targeted auto mode — constrains PICK_TICKET to specific items
   targetWork: z.array(z.string().regex(TARGET_WORK_ID_REGEX)).max(150).default([]),
 
+  // ADR 0002: human-gated work mode metadata.
+  work: z.object({
+    pinnedBranch: z.string().nullable().default(null),
+    changedFiles: z.array(z.string()).default([]),
+    shipChangePolicy: z.enum(["all", "session-only"]).nullable().default(null),
+  }).optional(),
+
   // T-124: Test stage baseline and retry tracking
   testBaseline: z.object({
     exitCode: z.number(),
@@ -652,11 +667,11 @@ export type VerificationCounters = NonNullable<FullSessionState["verificationCou
 // Guide input (from MCP tool call)
 // ---------------------------------------------------------------------------
 
-export type GuideAction = "start" | "report" | "resume" | "pre_compact" | "cancel";
+export type GuideAction = "start" | "report" | "resume" | "pre_compact" | "cancel" | "execute" | "ship" | "revise";
 
-/** Session execution mode: auto=full autonomous, review=code review only, plan=plan+review, guided=single ticket end-to-end */
-export type SessionMode = "auto" | "review" | "plan" | "guided";
-export const SESSION_MODES = ["auto", "review", "plan", "guided"] as const;
+/** Session execution mode: auto=full autonomous, review=code review only, plan=plan+review, guided=single ticket end-to-end, work=human-gated single ticket */
+export type SessionMode = "auto" | "review" | "plan" | "guided" | "work";
+export const SESSION_MODES = ["auto", "review", "plan", "guided", "work"] as const;
 
 export interface GuideReportInput {
   readonly completedAction: string;
@@ -678,10 +693,14 @@ export interface GuideInput {
   readonly report?: GuideReportInput;
   /** Execution mode (default: "auto"). Only used with action: "start". */
   readonly mode?: SessionMode;
-  /** Ticket ID for tiered modes (review, plan, guided). */
+  /** Ticket ID for tiered modes (review, plan, guided, work). */
   readonly ticketId?: string;
-  /** T-188: Target work items for targeted auto mode. Array of T-XXX and ISS-XXX IDs. */
+  /** T-188: Target work items for targeted auto mode. Array of {NS}-T-XXX and {NS}-ISS-XXX IDs. */
   readonly targetWork?: readonly string[];
+  /** ADR 0002: Human feedback for work-mode gate revision. */
+  readonly feedback?: string;
+  /** ADR 0002: User choice when /story ship sees non-session changes. */
+  readonly shipChangePolicy?: "all" | "session-only";
 }
 
 // ---------------------------------------------------------------------------

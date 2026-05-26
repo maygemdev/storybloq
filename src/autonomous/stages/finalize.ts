@@ -65,6 +65,22 @@ export class FinalizeStage implements WorkflowStage {
     }
 
     // ISS-099: Single combined instruction -- stage, verify, commit in one round-trip
+    const workPolicy = ctx.state.mode === "work"
+      ? (ctx.state.work?.shipChangePolicy ?? "session-only")
+      : null;
+    const sessionFiles = ctx.state.work?.changedFiles ?? [];
+    const ticketFile = ctx.state.ticket ? `.story/tickets/${ctx.state.ticket.id}.json` : null;
+    const issueFile = ctx.state.currentIssue ? `.story/issues/${ctx.state.currentIssue.id}.json` : null;
+    const workStageInstruction = workPolicy === "session-only"
+      ? [
+          "3. Stage only these session files plus the .story ticket/issue update:",
+          ...[...sessionFiles, ticketFile, issueFile].filter(Boolean).map((filePath) => `   - ${filePath}`),
+          "   Do NOT stage extra worktree changes.",
+        ]
+      : [
+          "3. Stage the approved worktree changes (code + .story/ changes). The human chose to include all current changes.",
+        ];
+
     return {
       instruction: [
         "# Finalize",
@@ -74,7 +90,9 @@ export class FinalizeStage implements WorkflowStage {
         "1. Run `git reset` to clear the staging area (ensures no stale files from prior operations)",
         ctx.state.ticket ? `2. Update ticket ${ctx.state.ticket.id} status to "complete" in .story/` : "",
         ctx.state.currentIssue ? `2. Ensure .story/issues/${ctx.state.currentIssue.id}.json is updated with status: "resolved"` : "",
-        "3. Stage only the files you modified for this fix (code + .story/ changes). Do NOT use `git add -A` or `git add .`",
+        ...(ctx.state.mode === "work"
+          ? workStageInstruction
+          : ["3. Stage only the files you modified for this fix (code + .story/ changes). Do NOT use `git add -A` or `git add .`"]),
         "4. Call me with completedAction: \"files_staged\"",
       ].filter(Boolean).join("\n"),
       reminders: [

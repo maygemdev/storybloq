@@ -1004,16 +1004,18 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
   // --- Autonomous guide ---
 
   server.registerTool("storybloq_autonomous_guide", {
-    description: "Autonomous session orchestrator. Call at every decision point during autonomous mode. Supports tiered access: auto (full autonomous), review (code review only), plan (plan + review), guided (single ticket end-to-end).",
+    description: "Autonomous session orchestrator. Call at every decision point during autonomous mode. Supports tiered access: auto (full autonomous), review (code review only), plan (plan + review), guided (single ticket end-to-end), work (human-gated single ticket).",
     inputSchema: {
       sessionId: z.string().uuid().nullable().describe("Session ID (null for start action)"),
-      action: z.enum(["start", "report", "resume", "pre_compact", "cancel"]).describe("Action to perform"),
-      mode: z.enum(["auto", "review", "plan", "guided"]).optional().describe("Execution tier (start action only): auto=full autonomous, review=code review only, plan=plan+review, guided=single ticket"),
-      ticketId: z.string().optional().describe("Ticket ID for tiered modes (review, plan, guided). Required for non-auto modes."),
-      targetWork: z.array(z.string().regex(TARGET_WORK_ID_REGEX)).max(150).optional().describe("For start action only: array of T-XXX and ISS-XXX IDs to work on in order. Empty or omitted = standard auto mode."),
+      action: z.enum(["start", "report", "resume", "pre_compact", "cancel", "execute", "ship", "revise"]).describe("Action to perform"),
+      mode: z.enum(["auto", "review", "plan", "guided", "work"]).optional().describe("Execution tier (start action only): auto=full autonomous, review=code review only, plan=plan+review, guided=single ticket, work=human-gated single ticket"),
+      ticketId: z.string().regex(TICKET_ID_REGEX).optional().describe("Ticket ID for tiered modes (review, plan, guided, work). Required for non-auto modes."),
+      targetWork: z.array(z.string().regex(TARGET_WORK_ID_REGEX)).max(150).optional().describe("For start action only: array of {NS}-T-XXX and {NS}-ISS-XXX IDs to work on in order. Empty or omitted = standard auto mode."),
+      feedback: z.string().optional().describe("Human feedback for work-mode revise action."),
+      shipChangePolicy: z.enum(["all", "session-only"]).optional().describe("Work-mode ship choice when non-session changes are present."),
       report: z.object({
         completedAction: z.string().describe("What was completed"),
-        ticketId: z.string().optional().describe("Ticket ID (for ticket_picked)"),
+        ticketId: z.string().regex(TICKET_ID_REGEX).optional().describe("Ticket ID (for ticket_picked)"),
         issueId: z.string().optional().describe("Issue ID (for issue_picked) — T-153"),
         commitHash: z.string().optional().describe("Git commit hash (for commit_done)"),
         handoverContent: z.string().optional().describe("Handover markdown content"),

@@ -251,6 +251,11 @@ function buildFixture(opts: FixtureOpts): Fixture {
     appendFileSync(join(sessDir, "events.log"), "this is not json\n");
   }
 
+  // ADR 0002 protects main/master/dev/develop/staging/production for auto
+  // starts. These fixtures exercise orphan recovery, so start the replacement
+  // session from a non-protected branch while preserving reachability from main.
+  run("git checkout -q -b feature/t250-orphan-start", root);
+
   return {
     root,
     sessionDir: sessDir,

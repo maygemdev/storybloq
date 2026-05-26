@@ -1,6 +1,6 @@
 # Autonomous & Tiered Modes
 
-This file is referenced from SKILL.md for `/story auto`, `/story review`, `/story plan`, and `/story guided` commands.
+This file is referenced from SKILL.md for `/story auto`, `/story start`, `/story execute`, `/story ship`, `/story review`, `/story plan`, and `/story guided` commands.
 
 ## Autonomous Mode
 
@@ -59,13 +59,13 @@ In Pi, run in the foreground with the Storybloq Pi extension installed and use `
 
 ## Targeted Mode
 
-`/story auto T-183 T-184 ISS-077 T-185` starts an autonomous session that works ONLY on the specified items, in order, then ends.
+`/story auto DEV01-T-183 DEV01-T-184 DEV01-ISS-077 DEV01-T-185` starts an autonomous session that works ONLY on the specified items, in order, then ends.
 
 **How it works:**
 
-1. Call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "targetWork": ["T-183", "T-184", "ISS-077", "T-185"] }`
+1. Call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "targetWork": ["DEV01-T-183", "DEV01-T-184", "DEV01-ISS-077", "DEV01-T-185"] }`
 2. The guide validates all IDs, filters out already-complete items, and presents only target items as candidates
-3. Session works through each item via the standard pipeline (T-XXX through PLAN, ISS-XXX through ISSUE_FIX)
+3. Session works through each item via the standard pipeline ({NS}-T-XXX through PLAN, {NS}-ISS-XXX through ISSUE_FIX)
 4. Session ends when all targets are done (or all remaining are blocked)
 
 **Behavior details:**
@@ -84,33 +84,62 @@ In Pi, run in the foreground with the Storybloq Pi extension installed and use `
 - Working through a dependency chain in order
 - Fixing a cascade of related issues
 
+## Human-Gated Work Mode
+
+`/story start {NS}-T-XXX` starts a single-ticket work session where the agent plans, reviews, implements, tests, and self-reviews, but the human gates implementation and commit.
+
+**How it works:**
+
+1. `/story start DEV01-T-012`: call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "mode": "work", "ticketId": "DEV01-T-012" }`
+2. The guide plans and runs automated plan review, then pauses at `PENDING_PLAN_APPROVAL`
+3. If the human approves, `/story execute` calls `{ "sessionId": "<id>", "action": "execute" }`
+4. The guide implements, tests, and runs code review, then pauses at `PENDING_SHIP`
+5. If the human approves, `/story ship` calls `{ "sessionId": "<id>", "action": "ship" }`; the guide finalizes, commits, completes the ticket, and ends the session
+
+**Feedback at gates:**
+
+If the human provides free-form feedback while the work session is in `PENDING_PLAN_APPROVAL` or `PENDING_SHIP`, call:
+
+```json
+{ "sessionId": "<id>", "action": "revise", "feedback": "<human feedback>" }
+```
+
+Plan-gate feedback returns to PLAN. Ship-gate feedback returns to IMPLEMENT. After revision, continue the same loop until the guide pauses at the same gate again.
+
+**Branch and worktree rules:**
+
+- `/story start` and `/story auto` fail on protected branches: `main`, `master`, `dev`, `develop`, `staging`, `production`
+- `/story start` requires a clean worktree
+- Work sessions are pinned to the branch where they started. `/story execute`, `/story ship`, and gate feedback must run from that branch
+- If `/story ship` detects changes outside the session's tracked files, ask the human whether to include all changes or session changes only, then call `ship` again with `shipChangePolicy: "all"` or `"session-only"`
+
 ## Tiered Access -- Review, Plan, Guided Modes
 
 The autonomous guide supports four execution tiers. Same guide, same handlers, different entry/exit points.
 
-### `/story review T-XXX`
+### `/story review {NS}-T-XXX`
 
-"I wrote code for T-XXX, review it." Enters at CODE_REVIEW, loops review rounds, exits on approval.
+"I wrote code for DEV01-T-012, review it." Enters at CODE_REVIEW, loops review rounds, exits on approval.
 
-1. Call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "mode": "review", "ticketId": "T-XXX" }`
+1. Call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "mode": "review", "ticketId": "DEV01-T-012" }`
 2. The guide enters CODE_REVIEW -- follow its diff capture and review instructions
 3. On approve: session ends automatically. On revise/reject: fix code, re-review
 4. After approval, you can proceed to commit -- the guide does NOT auto-commit in review mode
 
 **Note:** Review mode relaxes git constraints -- dirty working tree is allowed since the user has code ready for review.
 
-### `/story plan T-XXX`
+### `/story plan {NS}-T-XXX`
 
-"Help me plan T-XXX." Enters at PLAN, runs PLAN_REVIEW rounds, exits on approval.
+"Help me plan DEV01-T-012." Enters at PLAN, runs PLAN_REVIEW rounds, exits on approval.
 
-1. Call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "mode": "plan", "ticketId": "T-XXX" }`
+1. Call `storybloq_autonomous_guide` with `{ "sessionId": null, "action": "start", "mode": "plan", "ticketId": "DEV01-T-012" }`
 2. The guide enters PLAN -- write the implementation plan as a markdown file
 3. On plan review approve: session ends automatically. On revise/reject: revise plan, re-review
 4. The approved plan is saved in `.story/sessions/<id>/plan.md`
 
-### `/story guided T-XXX` (deprecated -- alias for targeted auto)
+### `/story guided {NS}-T-XXX` (deprecated -- alias for targeted auto)
 
-Use `/story auto T-XXX` instead. A single-ticket targeted auto session is equivalent. The guide handler still accepts `mode: "guided"` for backward compatibility but routes to the same targeted auto path.
+Use `/story auto {NS}-T-XXX` instead. A single-ticket targeted auto session is equivalent. The guide handler still accepts `mode: "guided"` for backward compatibility but routes to the same targeted auto path.
 
 ### All tiered modes:
 - Require a `ticketId` -- no ad-hoc review without a ticket in V1
@@ -120,7 +149,7 @@ Use `/story auto T-XXX` instead. A single-ticket targeted auto session is equiva
 ## Branch Affinity
 
 When running `/story auto` (standard mode, no targetWork), the guide checks if the
-current git branch contains a ticket or issue ID (e.g. `story/T-012-rebrand`).
+current git branch contains a ticket or issue ID (e.g. `story/DEV01-T-012-rebrand`).
 
 **Behavior:**
 - If the branch implies a specific ticket, the candidate list shows it first with a
@@ -134,13 +163,13 @@ current git branch contains a ticket or issue ID (e.g. `story/T-012-rebrand`).
 > This branch is scoped to {id}. The session will end with a handover.
 > To work on other tickets:
 > - Switch to `main` and run `/story auto` from there
-> - Use targeted mode: `/story auto T-XXX` (skips the branch check)
+> - Use targeted mode: `/story auto {NS}-T-XXX` (skips the branch check)
 > - Set `branchStrategy: "per-ticket"` in config (auto-creates branches per ticket)
 
 **When branchStrategy is "per-ticket":**
 The guide creates a new branch per ticket automatically. The mismatch check is skipped
 because each ticket gets its own branch.
 
-**Targeted mode (`/story auto T-XXX ISS-YYY`):**
+**Targeted mode (`/story auto {NS}-T-XXX {NS}-ISS-YYY`):**
 Branch affinity is skipped entirely. The targetWork list constrains picks regardless of
 branch name.

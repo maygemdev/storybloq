@@ -20,9 +20,13 @@ export interface AffinityAnnotation {
 
 // --- Constants ---
 
-const PROTECTED_BRANCHES = new Set([
+export const PROTECTED_BRANCHES = new Set([
   "main", "master", "develop", "dev", "staging", "production",
 ]);
+
+export function isProtectedBranch(branch: string | null | undefined): boolean {
+  return !!branch && PROTECTED_BRANCHES.has(branch);
+}
 
 const ENTITY_ID_REGEX = /(?:^|[/_-])([A-Z0-9]{3,12}-T-\d+[a-z]?|[A-Z0-9]{3,12}-ISS-\d+)(?=$|[/_-])/gi;
 

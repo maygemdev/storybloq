@@ -3,6 +3,7 @@ import { buildLensHistoryUpdate } from "./types.js";
 import type { GuideReportInput } from "../session-types.js";
 import { requiredRounds, nextReviewer } from "../review-depth.js";
 import { clearCache } from "../review-lenses/cache.js";
+import { gitDiffNames, gitStatus } from "../git-inspector.js";
 import { accumulateVerificationCounters } from "../review-lenses/verification-log.js";
 import { writeReviewVerdict, readReviewVerdict, buildTier1Verdict, type ReviewVerdictArtifact } from "../review-verdict.js";
 import {
@@ -11,6 +12,38 @@ import {
   reviewBackendsForClient,
   shouldUseNativeCodexReview,
 } from "./codex-native.js";
+
+function parsePorcelainPath(line: string): string | null {
+  if (line.length < 4) return null;
+  const raw = line.slice(3).trim();
+  if (!raw) return null;
+  const arrow = raw.indexOf(" -> ");
+  return arrow >= 0 ? raw.slice(arrow + 4).trim() : raw;
+}
+
+function isManagedSessionPath(filePath: string): boolean {
+  return filePath.startsWith(".story/sessions/") || filePath === ".story/status.json";
+}
+
+async function currentWorktreeChangedFiles(root: string, mergeBase?: string | null): Promise<string[]> {
+  const files = new Set<string>();
+  const status = await gitStatus(root);
+  if (status.ok) {
+    for (const line of status.data) {
+      const filePath = parsePorcelainPath(line);
+      if (filePath && !isManagedSessionPath(filePath)) files.add(filePath);
+    }
+  }
+  if (mergeBase) {
+    const diffNames = await gitDiffNames(root, mergeBase);
+    if (diffNames.ok) {
+      for (const filePath of diffNames.data) {
+        if (!isManagedSessionPath(filePath)) files.add(filePath);
+      }
+    }
+  }
+  return [...files].sort();
+}
 
 /**
  * CODE_REVIEW stage — independent reviewer evaluates the implementation.
@@ -353,6 +386,36 @@ export class CodeReviewStage implements WorkflowStage {
               "Session ending — review mode is complete. You can now proceed to commit.",
             ].join("\n"),
             reminders: [],
+            transitionedFrom: "CODE_REVIEW",
+          },
+        } as StageAdvance;
+      }
+      if (ctx.state.mode === "work") {
+        const changedFiles = await currentWorktreeChangedFiles(ctx.root, ctx.state.git.mergeBase);
+        ctx.writeState({
+          work: {
+            pinnedBranch: ctx.state.work?.pinnedBranch ?? ctx.state.git.branch ?? null,
+            changedFiles,
+            shipChangePolicy: null,
+          },
+        });
+        return {
+          action: "goto",
+          target: "PENDING_SHIP",
+          result: {
+            instruction: [
+              "# Work Session -- Ready to Ship",
+              "",
+              `Code for **${ctx.state.ticket?.id}** has passed automated review after ${roundNum} round(s).`,
+              "",
+              "Surface the diff summary, test results, and review result to the human.",
+              "If they approve, they should run `/story ship`.",
+              "If they provide feedback, call `storybloq_autonomous_guide` with:",
+              "```json",
+              `{ "sessionId": "${ctx.state.sessionId}", "action": "revise", "feedback": "<human feedback>" }`,
+              "```",
+            ].join("\n"),
+            reminders: ["Stop at this gate. Do not finalize or commit until the human approves shipping."],
             transitionedFrom: "CODE_REVIEW",
           },
         } as StageAdvance;

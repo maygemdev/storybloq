@@ -332,6 +332,28 @@ export class PlanReviewStage implements WorkflowStage {
           },
         } as StageAdvance;
       }
+      if (ctx.state.mode === "work") {
+        return {
+          action: "goto",
+          target: "PENDING_PLAN_APPROVAL",
+          result: {
+            instruction: [
+              "# Work Session -- Awaiting Plan Approval",
+              "",
+              `Plan for **${ctx.state.ticket?.id}** has been approved by automated review after ${roundNum} round(s).`,
+              "",
+              "Surface the plan summary to the human.",
+              "If they approve, they should run `/story execute`.",
+              "If they provide feedback, call `storybloq_autonomous_guide` with:",
+              "```json",
+              `{ "sessionId": "${ctx.state.sessionId}", "action": "revise", "feedback": "<human feedback>" }`,
+              "```",
+            ].join("\n"),
+            reminders: ["Stop at this gate. Do not implement until the human approves the plan."],
+            transitionedFrom: "PLAN_REVIEW",
+          },
+        } as StageAdvance;
+      }
       return { action: "advance" };
     }
 

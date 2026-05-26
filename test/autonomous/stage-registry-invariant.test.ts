@@ -20,6 +20,8 @@ const KNOWN_TRANSIENT_STATES = new Set<string>([
   "INIT",         // only set briefly inside handleStart
   "LOAD_CONTEXT", // only set briefly inside handleStart
   "COMPACT",      // transient waiting for resume (ISS-377)
+  "PENDING_PLAN_APPROVAL", // work mode waits for human plan approval
+  "PENDING_SHIP", // work mode waits for human ship approval
   "SESSION_END",  // terminal
 ]);
 
