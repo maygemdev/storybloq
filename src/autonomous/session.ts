@@ -64,6 +64,7 @@ export interface SessionConfig {
   handoverInterval?: number;
   stageOverrides?: Record<string, Record<string, unknown>>;
   branchStrategy?: "none" | "per-ticket";
+  namespace?: string | null;
 }
 
 /** Create a new session directory and write initial state.json. */
@@ -86,6 +87,7 @@ export function createSession(
     revision: 0,
     status: "active",
     mode: configOverrides?.mode ?? "auto",
+    namespace: configOverrides?.namespace ?? null,
     reviews: { plan: [], code: [] },
     completedTickets: [],
     finalizeCheckpoint: null,

@@ -1,4 +1,8 @@
-import { readHandover } from "../../core/handover-parser.js";
+import {
+  addHandoverNamespaceMetadata,
+  extractHandoverNamespace,
+  readHandover,
+} from "../../core/handover-parser.js";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -17,16 +21,49 @@ import {
 import { parseHandoverFilename, todayISO, CliValidationError } from "../helpers.js";
 import type { CommandContext, CommandResult } from "../types.js";
 import type { OutputFormat } from "../../models/types.js";
+import type { NamespaceScope } from "../../core/namespace-scope.js";
+import { resolveNamespaceScope } from "../../core/namespace-scope.js";
 
-export function handleHandoverList(ctx: CommandContext): CommandResult {
-  return { output: formatHandoverList(ctx.state.handoverFilenames, ctx.format) };
+async function filterHandoversByScope(
+  ctx: CommandContext,
+  scope?: NamespaceScope,
+  latestFallback: boolean = false,
+): Promise<string[]> {
+  if (!scope || scope.mode === "all" || !scope.namespace) {
+    return [...ctx.state.handoverFilenames];
+  }
+
+  const tagged: string[] = [];
+  const global: string[] = [];
+  for (const filename of ctx.state.handoverFilenames) {
+    try {
+      const content = await readHandover(ctx.handoversDir, filename);
+      const namespace = extractHandoverNamespace(content);
+      if (namespace === scope.namespace) tagged.push(filename);
+      else if (!namespace) global.push(filename);
+    } catch {
+      // Let get/latest surface read failures on selected files; list skips missing.
+    }
+  }
+  if (latestFallback && tagged.length > 0) return tagged;
+  return [...tagged, ...global];
+}
+
+export async function handleHandoverList(
+  ctx: CommandContext,
+  scope?: NamespaceScope,
+): Promise<CommandResult> {
+  const filenames = await filterHandoversByScope(ctx, scope);
+  return { output: formatHandoverList(filenames, ctx.format) };
 }
 
 export async function handleHandoverLatest(
   ctx: CommandContext,
   count: number = 1,
+  scope?: NamespaceScope,
 ): Promise<CommandResult> {
-  if (ctx.state.handoverFilenames.length === 0) {
+  const candidates = await filterHandoversByScope(ctx, scope, true);
+  if (candidates.length === 0) {
     return {
       output: formatError("not_found", "No handovers found", ctx.format),
       exitCode: ExitCode.USER_ERROR,
@@ -34,7 +71,7 @@ export async function handleHandoverLatest(
     };
   }
 
-  const filenames = ctx.state.handoverFilenames.slice(0, count);
+  const filenames = candidates.slice(0, count);
   const parts: string[] = [];
 
   for (const filename of filenames) {
@@ -130,6 +167,7 @@ export async function handleHandoverCreate(
   slugRaw: string,
   format: OutputFormat,
   root: string,
+  scopeOptions?: { namespace?: string; allNamespaces?: boolean },
 ): Promise<CommandResult> {
   if (!content.trim()) {
     throw new CliValidationError("invalid_input", "Handover content is empty");
@@ -138,6 +176,8 @@ export async function handleHandoverCreate(
   const slug = normalizeSlug(slugRaw);
   const date = todayISO();
   let filename: string | undefined;
+  const scope = await resolveNamespaceScope(root, scopeOptions ?? {});
+  const contentWithMetadata = addHandoverNamespaceMetadata(content, scope.namespace);
 
   await withProjectLock(root, { strict: false }, async () => {
     const absRoot = resolve(root);
@@ -194,7 +234,7 @@ export async function handleHandoverCreate(
 
     await parseHandoverFilename(candidate, handoversDir);
     await guardPath(candidatePath, wrapDir);
-    await atomicWrite(candidatePath, content);
+    await atomicWrite(candidatePath, contentWithMetadata);
     filename = candidate;
   });
 

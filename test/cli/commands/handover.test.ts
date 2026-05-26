@@ -7,6 +7,7 @@ import {
   normalizeSlug,
 } from "../../../src/cli/commands/handover.js";
 import { ExitCode } from "../../../src/core/output-formatter.js";
+import { extractHandoverNamespace } from "../../../src/core/handover-parser.js";
 import { CliValidationError } from "../../../src/cli/helpers.js";
 import { initProject } from "../../../src/core/init.js";
 import { makeState } from "../../core/test-factories.js";
@@ -27,27 +28,27 @@ function makeCtx(overrides: Partial<CommandContext> = {}): CommandContext {
 }
 
 describe("handleHandoverList", () => {
-  it("returns handover filenames", () => {
+  it("returns handover filenames", async () => {
     const ctx = makeCtx({
       state: makeState({ handoverFilenames: ["2026-03-19-session.md", "2026-03-18-session.md"] }),
     });
-    const result = handleHandoverList(ctx);
+    const result = await handleHandoverList(ctx);
     expect(result.output).toContain("2026-03-19-session.md");
     expect(result.output).toContain("2026-03-18-session.md");
   });
 
-  it("returns empty message when no handovers", () => {
+  it("returns empty message when no handovers", async () => {
     const ctx = makeCtx();
-    const result = handleHandoverList(ctx);
+    const result = await handleHandoverList(ctx);
     expect(result.output).toContain("No handovers");
   });
 
-  it("returns valid JSON", () => {
+  it("returns valid JSON", async () => {
     const ctx = makeCtx({
       format: "json",
       state: makeState({ handoverFilenames: ["2026-03-19-session.md"] }),
     });
-    const result = handleHandoverList(ctx);
+    const result = await handleHandoverList(ctx);
     const parsed = JSON.parse(result.output);
     expect(parsed.version).toBe(1);
     expect(parsed.data).toContain("2026-03-19-session.md");
@@ -168,6 +169,22 @@ describe("handleHandoverCreate", () => {
 
     const content = await readFile(join(dir, ".story", "handovers", created!), "utf-8");
     expect(content).toBe("# Session\nDone.");
+  });
+
+  it("adds namespace metadata when a namespace scope is provided", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "hc-test-"));
+    tmpDirs.push(dir);
+    await initProject(dir, { name: "test" });
+
+    const result = await handleHandoverCreate("# Session\nDone.", "session", "md", dir, {
+      namespace: "DEV01",
+    });
+    const filename = result.output.match(/Created handover: (.+)$/)?.[1];
+    expect(filename).toBeDefined();
+
+    const content = await readFile(join(dir, ".story", "handovers", filename!), "utf-8");
+    expect(extractHandoverNamespace(content)).toBe("DEV01");
+    expect(content).toContain("# Session");
   });
 
   it("generates globally monotonic sequence numbers", async () => {

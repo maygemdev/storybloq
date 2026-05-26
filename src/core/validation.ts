@@ -1,6 +1,7 @@
 import type { ProjectState } from "./project-state.js";
 import type { LoadWarning } from "./errors.js";
 import { CROSS_NODE_REF_CAPTURE_REGEX } from "../models/ticket.js";
+import { extractNamespace } from "../models/types.js";
 
 // --- Types ---
 
@@ -176,6 +177,13 @@ export function validateProject(state: ProjectState): ValidationResult {
           message: `Ticket ${t.id} blockedBy references umbrella ticket ${bid}. Use leaf tickets instead.`,
           entity: t.id,
         });
+      } else if (hasNamespaceMismatch(t.id, bid)) {
+        findings.push({
+          level: "warning",
+          code: "cross_namespace_blocked_by",
+          message: `Ticket ${t.id} blockedBy references ticket ${bid} in another namespace.`,
+          entity: t.id,
+        });
       }
     }
 
@@ -193,6 +201,13 @@ export function validateProject(state: ProjectState): ValidationResult {
           level: "error",
           code: "invalid_parent_ref",
           message: `Ticket ${t.id} parentTicket references nonexistent ticket ${t.parentTicket}.`,
+          entity: t.id,
+        });
+      } else if (hasNamespaceMismatch(t.id, t.parentTicket)) {
+        findings.push({
+          level: "error",
+          code: "cross_namespace_parent",
+          message: `Ticket ${t.id} parentTicket references ${t.parentTicket} in another namespace.`,
           entity: t.id,
         });
       }
@@ -213,6 +228,13 @@ export function validateProject(state: ProjectState): ValidationResult {
           level: "error",
           code: "invalid_related_ticket_ref",
           message: `Issue ${i.id} relatedTickets references nonexistent ticket ${tref}.`,
+          entity: i.id,
+        });
+      } else if (hasNamespaceMismatch(i.id, tref)) {
+        findings.push({
+          level: "warning",
+          code: "cross_namespace_related_ticket",
+          message: `Issue ${i.id} relatedTickets references ticket ${tref} in another namespace.`,
           entity: i.id,
         });
       }
@@ -299,6 +321,12 @@ export function validateProject(state: ProjectState): ValidationResult {
     infoCount,
     findings,
   };
+}
+
+function hasNamespaceMismatch(a: string, b: string): boolean {
+  const aNamespace = extractNamespace(a);
+  const bNamespace = extractNamespace(b);
+  return !!aNamespace && !!bNamespace && aNamespace !== bNamespace;
 }
 
 /**

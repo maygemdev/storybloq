@@ -19,6 +19,11 @@ import { touchLastMcpCallFile } from "../autonomous/liveness.js";
 import { runMcpReadTool, runMcpWriteTool, touchMcpLiveness } from "../tools/storybloq-tool-runner.js";
 export { runMcpReadTool, runMcpWriteTool } from "../tools/storybloq-tool-runner.js";
 import {
+  formatNamespaceScopePrefix,
+  resolveNamespaceScope,
+  scopeProjectState,
+} from "../core/namespace-scope.js";
+import {
   SUBPROCESS_CATEGORIES,
   sanitizeCmd,
   registerSubprocess,
@@ -28,6 +33,7 @@ import { handlePrepare, handleSynthesize, handleJudge } from "../autonomous/revi
 import { validateCachedFindings } from "../autonomous/review-lenses/schema-validator.js";
 import type { LensFinding } from "../autonomous/review-lenses/types.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { CommandContext, CommandResult } from "../cli/types.js";
 
 import {
   TICKET_ID_REGEX,
@@ -104,6 +110,26 @@ import {
 // --- Tool registration ---
 
 const nodeParam = z.string().regex(NODE_NAME_REGEX).optional().describe("Node name (orchestrator only). When provided, operates on that node's .story/ instead of the orchestrator's.");
+const namespaceParam = z.string().optional().describe("Namespace to scope ticket/issue work to (3-12 uppercase alphanumeric characters)");
+const allNamespacesParam = z.boolean().optional().describe("Include all namespaces instead of the active namespace");
+
+async function scopedReadHandler(
+  ctx: CommandContext,
+  args: { namespace?: string; allNamespaces?: boolean },
+  handler: (scopedCtx: CommandContext) => Promise<CommandResult> | CommandResult,
+  prefix: boolean = false,
+): Promise<CommandResult> {
+  const scope = await resolveNamespaceScope(ctx.root, {
+    namespace: args.namespace,
+    allNamespaces: args.allNamespaces,
+  });
+  const result = await handler({ ...ctx, state: scopeProjectState(ctx.state, scope) });
+  if (!prefix || ctx.format === "json") return result;
+  return {
+    ...result,
+    output: `${formatNamespaceScopePrefix(scope, ctx.state)}\n\n${result.output}`,
+  };
+}
 
 function resolveEffectiveRoot(pinnedRoot: string, nodeName?: string): { root: string } | McpToolResult {
   if (!nodeName) return { root: pinnedRoot };
@@ -138,8 +164,14 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
 
   server.registerTool("storybloq_status", {
     description: "Project summary: phase statuses, ticket/issue counts, blockers, current phase",
-  }, async () => {
-    const result = await runMcpReadTool(pinnedRoot, handleStatus);
+    inputSchema: {
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
+    },
+  }, async (args) => {
+    const result = await runMcpReadTool(pinnedRoot, (ctx) =>
+      scopedReadHandler(ctx, args, handleStatus, true),
+    );
     // ISS-570 G2: prepend update-available notice so /story's first MCP
     // call surfaces 'newer storybloq available' proactively. Synchronous
     // cache read; a background refresh is kicked off so the NEXT status
@@ -175,27 +207,50 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
     inputSchema: {
       count: z.number().int().min(1).max(10).optional()
         .describe("Number of candidates to return (default: 1)"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
     },
   }, (args) => runMcpReadTool(pinnedRoot, (ctx) =>
-    handleTicketNext(ctx, args.count ?? 1),
+    scopedReadHandler(
+      ctx,
+      args,
+      (scopedCtx) => handleTicketNext(scopedCtx, args.count ?? 1),
+      true,
+    ),
   ));
 
   server.registerTool("storybloq_ticket_blocked", {
     description: "All blocked tickets with their blocking dependencies",
-  }, () => runMcpReadTool(pinnedRoot, handleTicketBlocked));
+    inputSchema: {
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
+    },
+  }, (args) => runMcpReadTool(pinnedRoot, (ctx) =>
+    scopedReadHandler(ctx, args, handleTicketBlocked),
+  ));
 
   server.registerTool("storybloq_handover_list", {
     description: "List handover filenames (newest first)",
-  }, () => runMcpReadTool(pinnedRoot, handleHandoverList));
+    inputSchema: {
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
+    },
+  }, (args) => runMcpReadTool(pinnedRoot, async (ctx) => {
+    const scope = await resolveNamespaceScope(ctx.root, args);
+    return handleHandoverList(ctx, scope);
+  }));
 
   server.registerTool("storybloq_handover_latest", {
     description: "Content of the most recent handover document(s)",
     inputSchema: {
       count: z.number().int().min(1).max(10).optional().describe("Number of recent handovers to return (default: 1)"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
     },
-  }, (args) => runMcpReadTool(pinnedRoot, (ctx) =>
-    handleHandoverLatest(ctx, args.count ?? 1),
-  ));
+  }, (args) => runMcpReadTool(pinnedRoot, async (ctx) => {
+    const scope = await resolveNamespaceScope(ctx.root, args);
+    return handleHandoverLatest(ctx, args.count ?? 1, scope);
+  }));
 
   server.registerTool("storybloq_blocker_list", {
     description: "All roadmap blockers with dates and status",
@@ -231,6 +286,8 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
       status: z.enum(TICKET_STATUSES).optional().describe("Filter by status: open, inprogress, complete"),
       phase: z.string().optional().describe("Filter by phase ID"),
       type: z.enum(TICKET_TYPES).optional().describe("Filter by type: task, feature, chore"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
       node: nodeParam,
     },
   }, (args) => {
@@ -247,9 +304,13 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
           };
         }
       }
-      return handleTicketList(
-        { status: args.status, phase: args.phase, type: args.type },
+      return scopedReadHandler(
         ctx,
+        args,
+        (scopedCtx) => handleTicketList(
+          { status: args.status, phase: args.phase, type: args.type },
+          scopedCtx,
+        ),
       );
     }, eff.root);
   });
@@ -280,13 +341,19 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
       status: z.enum(ISSUE_STATUSES).optional().describe("Filter by status: open, inprogress, resolved"),
       severity: z.enum(ISSUE_SEVERITIES).optional().describe("Filter by severity: critical, high, medium, low"),
       component: z.string().optional().describe("Filter by component name"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
       node: nodeParam,
     },
   }, (args) => {
     const eff = resolveEffectiveRoot(pinnedRoot, args.node);
     if ("content" in eff) return eff;
     return runMcpReadTool(pinnedRoot, (ctx) =>
-      handleIssueList({ status: args.status, severity: args.severity, component: args.component }, ctx),
+      scopedReadHandler(
+        ctx,
+        args,
+        (scopedCtx) => handleIssueList({ status: args.status, severity: args.severity, component: args.component }, scopedCtx),
+      ),
     eff.root);
   });
 
@@ -328,9 +395,11 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
     inputSchema: {
       count: z.number().int().min(1).max(10).optional()
         .describe("Number of recommendations (default: 5)"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
     },
   }, (args) => runMcpReadTool(pinnedRoot, (ctx) =>
-    handleRecommend(ctx, args.count ?? 5),
+    handleRecommend(ctx, args.count ?? 5, args),
   ));
 
   server.registerTool("storybloq_snapshot", {
@@ -342,6 +411,8 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
     inputSchema: {
       phase: z.string().optional().describe("Export a single phase by ID"),
       all: z.boolean().optional().describe("Export entire project"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
     },
   }, (args) => {
     if (!args.phase && !args.all) {
@@ -358,7 +429,13 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
     }
     const mode = args.all ? "all" : "phase";
     const phaseId = args.phase ?? null;
-    return runMcpReadTool(pinnedRoot, (ctx) => handleExport(ctx, mode as "all" | "phase", phaseId));
+    return runMcpReadTool(pinnedRoot, (ctx) =>
+      scopedReadHandler(
+        ctx,
+        args,
+        (scopedCtx) => handleExport(scopedCtx, mode as "all" | "phase", phaseId),
+      ),
+    );
   });
 
   server.registerTool("storybloq_handover_create", {
@@ -366,6 +443,8 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
     inputSchema: {
       content: z.string().describe("Markdown content of the handover"),
       slug: z.string().optional().describe("Slug for filename (e.g. phase5b-wrapup). Default: session"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
     },
   }, (args) => {
     if (!args.content?.trim()) {
@@ -375,7 +454,7 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
       });
     }
     return runMcpWriteTool(pinnedRoot, (root) =>
-      handleHandoverCreate(args.content, args.slug ?? "session", "md", root),
+      handleHandoverCreate(args.content, args.slug ?? "session", "md", root, args),
     );
   });
 
@@ -571,9 +650,15 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
     inputSchema: {
       status: z.enum(NOTE_STATUSES).optional().describe("Filter by status: active, archived"),
       tag: z.string().optional().describe("Filter by tag"),
+      namespace: namespaceParam,
+      allNamespaces: allNamespacesParam,
     },
   }, (args) => runMcpReadTool(pinnedRoot, (ctx) =>
-    handleNoteList({ status: args.status, tag: args.tag }, ctx),
+    scopedReadHandler(
+      ctx,
+      args,
+      (scopedCtx) => handleNoteList({ status: args.status, tag: args.tag }, scopedCtx),
+    ),
   ));
 
   server.registerTool("storybloq_note_get", {
@@ -915,6 +1000,45 @@ export function registerAllTools(server: McpServer, pinnedRoot: string): void {
     try {
       const { handleNamespaceGet } = await import("../cli/commands/namespace.js");
       const result = await handleNamespaceGet(pinnedRoot);
+      return { content: [{ type: "text" as const, text: result.output }], isError: !!result.errorCode };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+    }
+  });
+
+  server.registerTool("storybloq_namespace_list", {
+    description: "List namespaces found in tickets and issues with counts",
+  }, async () => {
+    try {
+      const { handleNamespaceList } = await import("../cli/commands/namespace.js");
+      const result = await handleNamespaceList(pinnedRoot);
+      return { content: [{ type: "text" as const, text: result.output }], isError: !!result.errorCode };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+    }
+  });
+
+  server.registerTool("storybloq_namespace_check", {
+    description: "Check local namespace and current branch consistency",
+  }, async () => {
+    try {
+      const { handleNamespaceCheck } = await import("../cli/commands/namespace.js");
+      const result = await handleNamespaceCheck(pinnedRoot);
+      return { content: [{ type: "text" as const, text: result.output }], isError: !!result.errorCode };
+    } catch (err) {
+      return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+    }
+  });
+
+  server.registerTool("storybloq_namespace_clear", {
+    description: "Clear the current local namespace from .story/.local.json",
+    inputSchema: {
+      force: z.boolean().optional().describe("Required confirmation to clear the namespace"),
+    },
+  }, async (args) => {
+    try {
+      const { handleNamespaceClear } = await import("../cli/commands/namespace.js");
+      const result = await handleNamespaceClear(pinnedRoot, !!args.force);
       return { content: [{ type: "text" as const, text: result.output }], isError: !!result.errorCode };
     } catch (err) {
       return { content: [{ type: "text" as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };

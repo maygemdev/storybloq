@@ -5,6 +5,7 @@
 
 import type { GitResult } from "./session-types.js";
 import { gitHead, gitStatus, gitBlobHash, gitCheckoutNewBranch, gitBranchExists, gitCheckoutBranch, gitCheckRefFormat } from "./git-inspector.js";
+import { extractNamespace } from "../models/types.js";
 
 // --- Types ---
 
@@ -16,6 +17,14 @@ export interface BranchAffinity {
 
 export interface AffinityAnnotation {
   warningText: string | null;
+}
+
+export interface BranchNamespaceAffinity {
+  status: "none" | "matched" | "ambiguous";
+  namespace: string | null;
+  namespaces: readonly string[];
+  branch: string | null;
+  matchedIds: readonly string[];
 }
 
 // --- Constants ---
@@ -63,6 +72,43 @@ export function detectBranchAffinity(branch: string | null): BranchAffinity {
     return { status: "matched", matchedIds: matches, branch };
   }
   return { status: "ambiguous", matchedIds: matches, branch };
+}
+
+export function detectBranchNamespaceAffinity(branch: string | null): BranchNamespaceAffinity {
+  const affinity = detectBranchAffinity(branch);
+  const namespaces = [...new Set(
+    affinity.matchedIds
+      .map((id) => extractNamespace(id))
+      .filter((namespace): namespace is string => !!namespace),
+  )].sort();
+
+  if (affinity.status === "none" || namespaces.length === 0) {
+    return {
+      status: "none",
+      namespace: null,
+      namespaces: [],
+      branch: affinity.branch,
+      matchedIds: affinity.matchedIds,
+    };
+  }
+
+  if (namespaces.length === 1) {
+    return {
+      status: "matched",
+      namespace: namespaces[0]!,
+      namespaces,
+      branch: affinity.branch,
+      matchedIds: affinity.matchedIds,
+    };
+  }
+
+  return {
+    status: "ambiguous",
+    namespace: null,
+    namespaces,
+    branch: affinity.branch,
+    matchedIds: affinity.matchedIds,
+  };
 }
 
 export function checkAffinityMismatch(

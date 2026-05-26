@@ -424,8 +424,8 @@ Refinement complete. Here's what changed:
 - Added 8 dependency links (blockedBy chains)
 - No tickets flagged for splitting (all well-scoped)
 - [If review ran] Independent review: 2 suggestions incorporated
-  - T-005 split into T-005a/T-005b (was too broad)
-  - T-012 added blockedBy T-006 (missing dependency)
+  - DEV01-T-005 split into DEV01-T-005a/DEV01-T-005b (was too broad)
+  - DEV01-T-012 added blockedBy DEV01-T-006 (missing dependency)
 
 Updated proposal:
 
@@ -433,9 +433,9 @@ Updated proposal:
 
 | Ticket | Title                    | Phase      | Deps      |
 |--------|--------------------------|------------|-----------|
-| T-001  | Project setup            | foundation | --        |
-| T-002  | Database schema design   | foundation | T-001     |
-| T-006  | Auth setup               | foundation | T-001     |
+| DEV01-T-001  | Project setup            | foundation | --        |
+| DEV01-T-002  | Database schema design   | foundation | DEV01-T-001 |
+| DEV01-T-006  | Auth setup               | foundation | DEV01-T-001 |
 | ...    | ...                      | ...        | ...       |
 ```
 
@@ -513,9 +513,9 @@ Only proceed to **1e. Execute on Approval** after the user selects "Create every
 
 **Narrate every MCP call as it happens.** Bulk summaries ("51 tickets created") hide the mechanism and feel like magic (in a bad way). After each creation or update, surface a one-line visible narration to the user. Examples:
 - `-> storybloq · phase "foundation" created`
-- `-> storybloq · ticket T-003 "Supabase schema + RLS" created (phase: foundation)`
-- `-> storybloq · issue ISS-001 "Consistency budget" filed (severity: high)`
-- `-> storybloq · T-015 wired: blocked by T-010, T-014`
+- `-> storybloq · ticket DEV01-T-003 "Supabase schema + RLS" created (phase: foundation)`
+- `-> storybloq · issue DEV01-ISS-001 "Consistency budget" filed (severity: high)`
+- `-> storybloq · DEV01-T-015 wired: blocked by DEV01-T-010, DEV01-T-014`
 
 This makes the file convention visible, turns the tools into a demo of themselves, and gives the user confidence that something real is happening under the hood. Keep each narration to one line; don't interleave with long prose.
 

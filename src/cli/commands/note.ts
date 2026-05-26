@@ -4,6 +4,7 @@ import {
   deleteNote,
 } from "../../core/project-loader.js";
 import { nextNoteID } from "../../core/id-allocation.js";
+import { tryLoadLocalConfig } from "../../core/local-config-loader.js";
 import {
   formatNoteList,
   formatNote,
@@ -103,12 +104,14 @@ export async function handleNoteCreate(
     const id = nextNoteID(state.notes);
     const today = todayISO();
     const tags = args.tags ? normalizeTags(args.tags) : [];
+    const local = await tryLoadLocalConfig(root);
     const note: Note = {
       id,
       title: args.title && args.title.trim() !== "" ? args.title : null,
       content: args.content,
       tags,
       status: "active",
+      ...(local ? { namespace: local.namespace } : {}),
       createdDate: today,
       updatedDate: today,
     };

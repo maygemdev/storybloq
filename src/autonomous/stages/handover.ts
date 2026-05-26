@@ -46,7 +46,9 @@ export class HandoverStage implements WorkflowStage {
     // Create handover via existing handler
     let handoverFailed = false;
     try {
-      await handleHandoverCreate(content, "auto-session", "md", ctx.root);
+      await handleHandoverCreate(content, "auto-session", "md", ctx.root, {
+        namespace: ctx.state.namespace ?? undefined,
+      });
     } catch {
       handoverFailed = true;
       try {

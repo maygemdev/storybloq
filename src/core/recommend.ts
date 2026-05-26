@@ -18,6 +18,7 @@ import {
   isCrossNodeBlocked,
 } from "./queries.js";
 import { validateProject } from "./validation.js";
+import { scopeProjectState, type NamespaceScope } from "./namespace-scope.js";
 
 // --- Types ---
 
@@ -43,6 +44,7 @@ export interface RecommendOptions {
   readonly previousOpenIssueCount?: number;
   readonly federationState?: FederationState;
   readonly crossNodeRefStatuses?: Record<string, string>;
+  readonly namespaceScope?: NamespaceScope;
 }
 
 export type RecommendItemKind = "ticket" | "issue" | "action";
@@ -105,24 +107,27 @@ export function recommend(
   count: number,
   options?: RecommendOptions,
 ): RecommendResult {
+  const workState = options?.namespaceScope
+    ? scopeProjectState(state, options.namespaceScope)
+    : state;
   const effectiveCount = Math.max(1, Math.min(10, count));
   const dedup = new Map<string, Recommendation>();
-  const phaseIndex = buildPhaseIndex(state);
+  const phaseIndex = buildPhaseIndex(workState);
 
   const crossNodeStatuses = options?.crossNodeRefStatuses;
   const generators = [
     () => generateValidationSuggestions(state),
-    () => generateCriticalIssues(state),
-    () => generateInProgressTickets(state, phaseIndex, crossNodeStatuses),
-    () => generateHighImpactUnblocks(state, crossNodeStatuses),
-    () => generateNearCompleteUmbrellas(state, phaseIndex, crossNodeStatuses),
-    () => generatePhaseMomentum(state, crossNodeStatuses),
-    () => generateQuickWins(state, phaseIndex, crossNodeStatuses),
-    () => generateOpenIssues(state),
-    () => generateDebtTrend(state, options),
+    () => generateCriticalIssues(workState),
+    () => generateInProgressTickets(workState, phaseIndex, crossNodeStatuses),
+    () => generateHighImpactUnblocks(workState, crossNodeStatuses),
+    () => generateNearCompleteUmbrellas(workState, phaseIndex, crossNodeStatuses),
+    () => generatePhaseMomentum(workState, crossNodeStatuses),
+    () => generateQuickWins(workState, phaseIndex, crossNodeStatuses),
+    () => generateOpenIssues(workState),
+    () => generateDebtTrend(workState, options),
   ];
 
-  if (options?.federationState && state.config.type === "orchestrator") {
+  if (options?.federationState && workState.config.type === "orchestrator") {
     const facts = buildFederationFacts(options.federationState);
     generators.push(
       () => generateFedUnreachable(facts),
@@ -143,14 +148,14 @@ export function recommend(
   }
 
   // ISS-018: Handover context boost — tickets referenced in actionable sections get +50
-  applyHandoverBoost(state, dedup, options);
+  applyHandoverBoost(workState, dedup, options);
 
   // Phase-distance penalty: tickets in future phases are penalized
-  const curPhase = currentPhase(state);
+  const curPhase = currentPhase(workState);
   const curPhaseIdx = curPhase ? phaseIndex.get(curPhase.id) ?? 0 : 0;
   for (const [id, rec] of dedup) {
     if (rec.kind !== "ticket") continue;
-    const ticket = state.ticketByID(id);
+    const ticket = workState.ticketByID(id);
     if (!ticket || ticket.phase == null) continue;
     const ticketPhaseIdx = phaseIndex.get(ticket.phase);
     if (ticketPhaseIdx === undefined) continue;

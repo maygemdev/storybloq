@@ -181,7 +181,8 @@ export function formatStatus(
     lines.push("");
     for (const s of activeSessions) {
       const ticket = s.ticketId ? `${s.ticketId}: ${escapeMarkdownInline(s.ticketTitle ?? "")}` : "no ticket";
-      lines.push(`- ${s.sessionId}: ${s.state} -- ${ticket} (${s.mode} mode)`);
+      const namespace = s.namespace ? `, namespace ${s.namespace}` : "";
+      lines.push(`- ${s.sessionId}: ${s.state} -- ${ticket} (${s.mode} mode${namespace})`);
     }
   }
 
@@ -261,7 +262,8 @@ export function formatFederatedStatus(
     lines.push("");
     for (const s of activeSessions) {
       const ticket = s.ticketId ? `${s.ticketId}: ${escapeMarkdownInline(s.ticketTitle ?? "")}` : "no ticket";
-      lines.push(`- ${s.sessionId}: ${s.state} -- ${ticket} (${s.mode} mode)`);
+      const namespace = s.namespace ? `, namespace ${s.namespace}` : "";
+      lines.push(`- ${s.sessionId}: ${s.state} -- ${ticket} (${s.mode} mode${namespace})`);
     }
   }
 

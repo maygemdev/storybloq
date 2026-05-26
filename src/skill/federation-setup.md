@@ -12,7 +12,7 @@ Federation lets one **orchestrator** project coordinate across multiple **node**
 - **Nodes**: Independent storybloq projects in separate directories/repos. They don't know they're in a federation -- they work exactly like standalone projects.
 - **`dependsOn`**: Build-order topology between nodes. Used for DAG visualization and dispatch ordering.
 - **`links`**: Runtime integration points between nodes (informational, not enforced).
-- **`crossNodeBlockedBy`**: Ticket field on orchestrator tickets referencing work in node projects (e.g., `["engine:T-010", "client:T-005"]`). Used to block coordination milestones until node work completes.
+- **`crossNodeBlockedBy`**: Ticket field on orchestrator tickets referencing work in node projects (e.g., `["engine:DEV01-T-010", "client:DEV01-T-005"]`). Used to block coordination milestones until node work completes.
 - **`federation.allowNodeWrites`**: When true, orchestrator MCP tools can write to node `.story/` directories.
 
 The orchestrator does NOT duplicate per-node work. It tracks only cross-node coordination points (milestones). Each node manages its own tickets, phases, issues, and handovers independently.
@@ -164,7 +164,7 @@ The orchestrator does NOT duplicate per-node work. Its phases represent cross-no
 Create milestone tickets in the "milestones" phase:
 ```
 storybloq ticket create --title "Core connectivity verified" --type task --phase milestones
-storybloq ticket update T-001 --cross-node-blocked-by server:T-010,client:T-008
+storybloq ticket update DEV01-T-001 --cross-node-blocked-by server:DEV01-T-010,client:DEV01-T-008
 ```
 
 ### Larger projects (4+ nodes): replace with lifecycle phases
@@ -175,8 +175,8 @@ Delete the default milestones phase and create phases that reflect the platform'
 |-------|---------|----------------|
 | design | Architecture specs, protocol definitions, review resolution | Wire protocol spec, architecture decision records |
 | infrastructure | Shared CI, test fixtures, Docker images | Protocol fixture files, contract test CI templates |
-| foundation | Core connectivity proven across key nodes | "Server core operational" (cross: server:T-020), "Client operational" (cross: client:T-012) |
-| platform | Major features integrated across nodes | "Studio MVP operational" (cross: studio:T-009), "Mobile SDK operational" (cross: mobile:T-008) |
+| foundation | Core connectivity proven across key nodes | "Server core operational" (cross: server:DEV01-T-020), "Client operational" (cross: client:DEV01-T-012) |
+| platform | Major features integrated across nodes | "Studio MVP operational" (cross: studio:DEV01-T-009), "Mobile SDK operational" (cross: mobile:DEV01-T-008) |
 | completion | Full feature set, hardening, release readiness | "Platform hardened" (cross: all nodes), "v1.0 release ready" |
 | documentation | Shared docs (API reference, deploy guide) | API reference, deployment guide, contributor guide |
 
@@ -193,12 +193,12 @@ Then create milestone tickets in each phase with `crossNodeBlockedBy`:
 ```
 storybloq ticket create --title "Wire protocol v1 spec" --type task --phase design
 storybloq ticket create --title "Server core operational" --type feature --phase foundation
-storybloq ticket update T-002 --cross-node-blocked-by server:T-020
+storybloq ticket update DEV01-T-002 --cross-node-blocked-by server:DEV01-T-020
 ```
 
 ### Guidelines for all projects
 
-- **Use `crossNodeBlockedBy` on every coordination milestone.** This is what makes orchestrator tickets meaningful -- they gate on real node work. Example: `--cross-node-blocked-by engine:T-020,client:T-012`
+- **Use `crossNodeBlockedBy` on every coordination milestone.** This is what makes orchestrator tickets meaningful -- they gate on real node work. Example: `--cross-node-blocked-by engine:DEV01-T-020,client:DEV01-T-012`
 - **Placeholder refs are OK.** Node tickets don't need to exist yet -- refs resolve once created during per-node setup (Step 6).
 - **Ask the user** what the major cross-repo coordination points are, or infer from the dependency topology and build order.
 - **Don't create generic phase-label tickets** like "Phase 1 complete." Each milestone should describe a concrete coordination outcome: "Wire protocol contract verified," "Studio playground streams via client SDK."

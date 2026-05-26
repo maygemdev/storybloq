@@ -90,6 +90,7 @@ Alternative install via the Claude Code plugin system: see [Storybloq/plugin-arc
 ```bash
 cd your-project
 storybloq init --name "your-project"
+storybloq namespace set DEV01
 ```
 
 For multi-repo projects, see [Federation](#federation) below.
@@ -100,8 +101,8 @@ That scaffolds:
 .story/
 ├── config.json         project config + recipe overrides
 ├── roadmap.json        phase ordering + metadata
-├── tickets/            T-001.json, T-002.json, ...
-├── issues/             ISS-001.json, ISS-002.json, ...
+├── tickets/            DEV01-T-001.json, DEV01-T-002.json, ...
+├── issues/             DEV01-ISS-001.json, DEV01-ISS-002.json, ...
 ├── notes/              N-001.json, N-002.json, ...
 ├── lessons/            L-001.json, ...
 ├── handovers/          YYYY-MM-DD-<slug>.md
@@ -119,8 +120,8 @@ Commit everything except `.story/snapshots/`.
 Inside Claude Code or Pi (`$story` in Codex):
 
 - **`/story`** - loads project status, reads the latest handover, surfaces open tickets and issues, lists blocked work, summarizes recent changes.
-- **`/story auto T-001 T-002 ISS-013`** - autonomous mode scoped to those items. Drives a ticket through plan -> plan review -> implement -> tests -> code review -> commit with handovers at each checkpoint.
-- **`/story review T-001`** - runs the multi-lens review (see [Storybloq/lenses](https://github.com/Storybloq/lenses)) against a ticket's diff.
+- **`/story auto DEV01-T-001 DEV01-T-002 DEV01-ISS-013`** - autonomous mode scoped to those items. Drives a ticket through plan -> plan review -> implement -> tests -> code review -> commit with handovers at each checkpoint.
+- **`/story review DEV01-T-001`** - runs the multi-lens review (see [Storybloq/lenses](https://github.com/Storybloq/lenses)) against a ticket's diff.
 - **`/story handover`** - writes a session handover capturing decisions, blockers, and next steps.
 
 Outside Claude Code, the same state is one `storybloq` invocation away.
@@ -147,7 +148,7 @@ Three relationship types connect nodes:
 
 - **`dependsOn`** on node config: build-order edges. The web app depends on the API.
 - **`links`** on node config: runtime integration. The web app calls the API over HTTP.
-- **`crossNodeBlockedBy`** on tickets: a ticket in one repo is blocked until a ticket in another repo is complete. Example: `"crossNodeBlockedBy": ["api:T-012"]`.
+- **`crossNodeBlockedBy`** on tickets: a ticket in one repo is blocked until a ticket in another repo is complete. Example: `"crossNodeBlockedBy": ["api:DEV01-T-012"]`.
 
 From the orchestrator directory:
 
@@ -322,18 +323,18 @@ import { loadProject } from "@storybloq/storybloq";
 const { state, warnings } = await loadProject("/path/to/project");
 console.log(state.tickets.length);           // all tickets
 console.log(state.phaseTickets("p1"));       // leaf tickets in phase p1
-console.log(state.umbrellaChildren("T-014")); // children of an umbrella
+console.log(state.umbrellaChildren("DEV01-T-014")); // children of an umbrella
 ```
 
 Full type definitions ship with the package (`exports.types`).
 
 ## File format examples
 
-**Ticket** (`.story/tickets/T-001.json`):
+**Ticket** (`.story/tickets/DEV01-T-001.json`):
 
 ```json
 {
-  "id": "T-001",
+  "id": "DEV01-T-001",
   "title": "Add search to sidebar",
   "type": "task",
   "status": "inprogress",
@@ -348,11 +349,11 @@ Full type definitions ship with the package (`exports.types`).
 }
 ```
 
-**Issue** (`.story/issues/ISS-001.json`):
+**Issue** (`.story/issues/DEV01-ISS-001.json`):
 
 ```json
 {
-  "id": "ISS-001",
+  "id": "DEV01-ISS-001",
   "title": "Drag handle hit target too small on trackpad",
   "status": "open",
   "severity": "medium",
@@ -365,15 +366,16 @@ Full type definitions ship with the package (`exports.types`).
 }
 ```
 
-Each record is its own file. IDs are sequential within type (`T-001`, `T-002`, ...). Relationships are single-canonical-owner: a ticket's `blockedBy` field points at blocker tickets, and the reverse (who-blocks-me) is derived by scanning.
+Each record is its own file. IDs are sequential within namespace and type (`DEV01-T-001`, `DEV01-T-002`, ...). Relationships are single-canonical-owner: a ticket's `blockedBy` field points at blocker tickets, and the reverse (who-blocks-me) is derived by scanning.
 
-Ticket and issue records preserve unknown JSON fields. Use `storybloq ticket meta` and `storybloq issue meta` to read or mutate those custom passthrough fields without touching core Storybloq fields. Values are JSON, and dot paths address nested objects, for example `storybloq ticket meta set T-001 integration.linear '"ABC-123"'`.
+Ticket and issue records preserve unknown JSON fields. Use `storybloq ticket meta` and `storybloq issue meta` to read or mutate those custom passthrough fields without touching core Storybloq fields. Values are JSON, and dot paths address nested objects, for example `storybloq ticket meta set DEV01-T-001 integration.linear '"ABC-123"'`.
 
 ## Example workflow
 
 ```bash
 # Initialize
 storybloq init --name "my-app"
+storybloq namespace set DEV01
 
 # Add the first phase
 storybloq phase create --id bootstrap --name "Bootstrap" --label "PHASE 1" \
@@ -383,11 +385,11 @@ storybloq phase create --id bootstrap --name "Bootstrap" --label "PHASE 1" \
 storybloq ticket create --title "Scaffold Next.js" --type task --phase bootstrap
 
 # Start Claude Code, type /story, then work on it
-# (or go autonomous: /story auto T-001)
+# (or go autonomous: /story auto DEV01-T-001)
 
 # At the end of a session, commit your changes including .story/
 git add .
-git commit -m "T-001: scaffold Next.js"
+git commit -m "DEV01-T-001: scaffold Next.js"
 
 # Session ends. Next session starts with /story and picks up with full context.
 ```

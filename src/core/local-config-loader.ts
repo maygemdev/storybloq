@@ -45,6 +45,17 @@ export async function loadLocalConfig(root: string): Promise<LocalConfig> {
   return parsed.data;
 }
 
+export async function tryLoadLocalConfig(root: string): Promise<LocalConfig | null> {
+  try {
+    return await loadLocalConfig(root);
+  } catch (err: unknown) {
+    if (err instanceof ProjectLoaderError && err.code === "not_found") {
+      return null;
+    }
+    throw err;
+  }
+}
+
 export async function writeLocalConfig(
   root: string,
   config: LocalConfig,

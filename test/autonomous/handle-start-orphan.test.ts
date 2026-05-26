@@ -93,6 +93,7 @@ function setupProjectTree(root: string): void {
     phases: [{ id: "p1", label: "P1", name: "Phase 1", description: "Test phase" }],
     blockers: [],
   }));
+  writeFileSync(join(story, ".local.json"), JSON.stringify({ namespace: "TEST" }));
 }
 
 function writeTicket(root: string, id: string, status: "open" | "inprogress" | "complete"): void {

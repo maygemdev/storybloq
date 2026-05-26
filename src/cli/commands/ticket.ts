@@ -1,6 +1,7 @@
 import { nextTicket, nextTickets, blockedTickets } from "../../core/queries.js";
 import { nextTicketID, nextOrder } from "../../core/id-allocation.js";
 import { getNamespace } from "../../core/local-config-loader.js";
+import { assertBranchNamespaceAllows } from "../../core/namespace-guard.js";
 import { validateProject } from "../../core/validation.js";
 import { ProjectState } from "../../core/project-state.js";
 import {
@@ -269,6 +270,7 @@ export async function handleTicketCreate(
     }
 
     const namespace = await getNamespace(root);
+    await assertBranchNamespaceAllows(root, namespace, "Ticket creation");
     const id = nextTicketID(state.tickets, namespace);
     const order = nextOrder(args.phase, state);
     const ticket: Ticket = {

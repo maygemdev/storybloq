@@ -49,7 +49,7 @@ Call `storybloq_review_lenses_prepare` with:
   "stage": "CODE_REVIEW",
   "diff": "<full diff text>",
   "changedFiles": ["src/foo.ts", "src/bar.ts"],
-  "ticketDescription": "T-XXX: description of the ticket (or 'Manual review -- brief description' if no ticket)",
+  "ticketDescription": "{NS}-T-XXX: description of the ticket (or 'Manual review -- brief description' if no ticket)",
   "reviewRound": 1,
   "priorDeferrals": []
 }
@@ -251,7 +251,7 @@ _Found in surrounding code, not introduced by this diff. Filed as issues, exclud
 
 | # | Severity | File | Finding | Filed As |
 |---|----------|------|---------|----------|
-| P1 | high | src/stages/plan.ts:42 | Unguarded loadProject | ISS-089 |
+| P1 | high | src/stages/plan.ts:42 | Unguarded loadProject | DEV01-ISS-089 |
 
 ### Tensions
 

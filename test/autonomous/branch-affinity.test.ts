@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectBranchAffinity, checkAffinityMismatch, buildAffinityAnnotation, buildMismatchHandoverInstruction } from "../../src/autonomous/branch-affinity.js";
+import { detectBranchAffinity, detectBranchNamespaceAffinity, checkAffinityMismatch, buildAffinityAnnotation, buildMismatchHandoverInstruction } from "../../src/autonomous/branch-affinity.js";
 
 describe("detectBranchAffinity", () => {
   it("returns none for null branch", () => {
@@ -79,6 +79,22 @@ describe("detectBranchAffinity", () => {
   it("does not match IDs embedded without delimiter", () => {
     const result = detectBranchAffinity("featureTEST-T-100work");
     expect(result.status).toBe("none");
+  });
+});
+
+describe("detectBranchNamespaceAffinity", () => {
+  it("extracts a single namespace from a matched branch", () => {
+    const result = detectBranchNamespaceAffinity("story/DEV01-T-012-search");
+    expect(result.status).toBe("matched");
+    expect(result.namespace).toBe("DEV01");
+    expect(result.namespaces).toEqual(["DEV01"]);
+  });
+
+  it("treats multiple namespaces as ambiguous", () => {
+    const result = detectBranchNamespaceAffinity("story/DEV01-T-012-and-QA999-ISS-001");
+    expect(result.status).toBe("ambiguous");
+    expect(result.namespace).toBeNull();
+    expect(result.namespaces).toEqual(["DEV01", "QA999"]);
   });
 });
 

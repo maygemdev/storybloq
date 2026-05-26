@@ -5,6 +5,7 @@ import type { LoadWarning } from "./errors.js";
 
 const HANDOVER_DATE_REGEX = /^\d{4}-\d{2}-\d{2}/;
 const HANDOVER_SEQ_REGEX = /^(\d{4}-\d{2}-\d{2})-(\d{2})-/;
+const HANDOVER_NAMESPACE_REGEX = /^\s*<!--\s*storybloq:\s*namespace=([A-Z0-9]{3,12})\s*-->/;
 
 /**
  * Lists handover markdown files, sorted by date (newest first).
@@ -77,6 +78,20 @@ export async function readHandover(
   filename: string,
 ): Promise<string> {
   return readFile(join(handoversDir, filename), "utf-8");
+}
+
+export function extractHandoverNamespace(content: string): string | null {
+  const match = content.match(HANDOVER_NAMESPACE_REGEX);
+  return match?.[1] ?? null;
+}
+
+export function addHandoverNamespaceMetadata(
+  content: string,
+  namespace: string | null,
+): string {
+  if (!namespace) return content;
+  if (extractHandoverNamespace(content)) return content;
+  return `<!-- storybloq: namespace=${namespace} -->\n\n${content}`;
 }
 
 /**

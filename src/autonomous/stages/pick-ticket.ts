@@ -4,6 +4,7 @@ import type { WorkflowStage, StageResult, StageAdvance, StageContext } from "./t
 import type { GuideReportInput } from "../session-types.js";
 import { isTargetedMode, getRemainingTargets, buildTargetedCandidatesText, buildTargetedPickInstruction, buildTargetedStuckHandover } from "../target-work.js";
 import { detectBranchAffinity, checkAffinityMismatch, buildAffinityAnnotation, buildMismatchHandoverInstruction, createTicketBranch, refreshGitWorkingState } from "../branch-affinity.js";
+import { scopeProjectState } from "../../core/namespace-scope.js";
 
 /**
  * PICK_TICKET stage -- Claude selects the next ticket to work on.
@@ -67,7 +68,13 @@ export class PickTicketStage implements WorkflowStage {
       };
     }
 
-    // Standard auto mode -- browse full roadmap
+    // Standard auto mode -- browse active namespace
+    if (ctx.state.namespace) {
+      projectState = scopeProjectState(projectState, {
+        namespace: ctx.state.namespace,
+        mode: "active",
+      });
+    }
     const { nextTickets } = await import("../../core/queries.js");
     const candidates = nextTickets(projectState, 5);
 
@@ -126,7 +133,7 @@ export class PickTicketStage implements WorkflowStage {
         '```json',
         topCandidate
           ? `{ "sessionId": "${ctx.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${topCandidate.ticket.id}" } }`
-          : `{ "sessionId": "${ctx.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "T-XXX" } }`,
+          : `{ "sessionId": "${ctx.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${ctx.state.namespace ?? "{NS}"}-T-XXX" } }`,
         '```',
         ...(hasIssues ? [
           "",

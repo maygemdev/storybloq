@@ -14,6 +14,7 @@ export interface ActiveSessionSummary {
   readonly mode: string;
   readonly ticketId: string | null;
   readonly ticketTitle: string | null;
+  readonly namespace: string | null;
 }
 
 /**
@@ -69,6 +70,7 @@ export function scanActiveSessions(root: string): readonly ActiveSessionSummary[
       mode: (parsed.mode as string) ?? "auto",
       ticketId: (ticket?.id as string) ?? null,
       ticketTitle: (ticket?.title as string) ?? null,
+      namespace: (parsed.namespace as string) ?? null,
     });
   }
 

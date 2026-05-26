@@ -25,6 +25,12 @@ import {
 } from "./helpers.js";
 import { parseMetadataValue } from "./commands/metadata.js";
 import { formatError, ExitCode } from "../core/output-formatter.js";
+import {
+  formatNamespaceScopePrefix,
+  resolveNamespaceScope,
+  scopeProjectState,
+} from "../core/namespace-scope.js";
+import type { CommandContext, CommandResult } from "./types.js";
 
 // Handler imports — read handlers
 import { handleStatus } from "./commands/status.js";
@@ -110,13 +116,56 @@ import { handleReference } from "./commands/reference.js";
 import { handleSelftest } from "./commands/selftest.js";
 
 // Namespace command
-import { handleNamespaceSet, handleNamespaceGet } from "./commands/namespace.js";
+import {
+  handleNamespaceSet,
+  handleNamespaceGet,
+  handleNamespaceList,
+  handleNamespaceCheck,
+  handleNamespaceClear,
+} from "./commands/namespace.js";
 
 function addNodeOption<T>(y: Argv<T>): Argv<T & { node: string | undefined }> {
   return y.option("node", {
     type: "string",
     describe: "Node name (orchestrator only). Operates on that node's .story/ instead of the orchestrator's.",
   }) as Argv<T & { node: string | undefined }>;
+}
+
+function addNamespaceScopeOptions<T>(
+  y: Argv<T>,
+): Argv<T & { namespace: string | undefined; allNamespaces: boolean | undefined }> {
+  return y
+    .option("namespace", {
+      type: "string",
+      describe: "Show work from a specific namespace",
+    })
+    .option("all-namespaces", {
+      type: "boolean",
+      describe: "Show work from every namespace",
+    }) as unknown as Argv<T & { namespace: string | undefined; allNamespaces: boolean | undefined }>;
+}
+
+async function runScopedRead(
+  ctx: CommandContext,
+  options: { namespace?: string; allNamespaces?: boolean },
+  handler: (scopedCtx: CommandContext) => Promise<CommandResult> | CommandResult,
+  prefix: boolean = false,
+): Promise<CommandResult> {
+  const scope = await resolveNamespaceScope(ctx.root, {
+    namespace: options.namespace,
+    allNamespaces: options.allNamespaces,
+  });
+  const scopedCtx = { ...ctx, state: scopeProjectState(ctx.state, scope) };
+  const result = await handler(scopedCtx);
+  if (!prefix || ctx.format === "json") return result;
+  return {
+    ...result,
+    output: `${formatNamespaceScopePrefix(scope, ctx.state)}\n\n${result.output}`,
+  };
+}
+
+function readAllNamespacesArg(argv: Record<string, unknown>): boolean | undefined {
+  return (argv["all-namespaces"] ?? argv.allNamespaces) as boolean | undefined;
 }
 
 function resolveRootWithNode(
@@ -141,10 +190,20 @@ export function registerStatusCommand(yargs: Argv): Argv {
   return yargs.command(
     "status",
     "Project summary",
-    (y) => addFormatOption(y),
+    (y) => addNamespaceScopeOptions(addFormatOption(y)),
     async (argv) => {
       const format = parseOutputFormat(argv.format);
-      await runReadCommand(format, handleStatus);
+      await runReadCommand(format, (ctx) =>
+        runScopedRead(
+          ctx,
+          {
+            namespace: argv.namespace as string | undefined,
+            allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+          },
+          handleStatus,
+          true,
+        ),
+      );
     },
   );
 }
@@ -310,29 +369,39 @@ export function registerHandoverCommand(yargs: Argv): Argv {
         .command(
           "list",
           "List handover filenames (newest first)",
-          (y2) => addFormatOption(y2),
+          (y2) => addNamespaceScopeOptions(addFormatOption(y2)),
           async (argv) => {
             const format = parseOutputFormat(argv.format);
-            await runReadCommand(format, handleHandoverList);
+            await runReadCommand(format, async (ctx) => {
+              const scope = await resolveNamespaceScope(ctx.root, {
+                namespace: argv.namespace as string | undefined,
+                allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+              });
+              return handleHandoverList(ctx, scope);
+            });
           },
         )
         .command(
           "latest",
           "Content of most recent handover(s)",
           (y2) =>
-            addFormatOption(
+            addNamespaceScopeOptions(addFormatOption(
               y2.option("count", {
                 type: "number",
                 default: 1,
                 describe: "Number of recent handovers to return (default: 1)",
               }),
-            ),
+            )),
           async (argv) => {
             const format = parseOutputFormat(argv.format);
             const count = Math.max(1, Math.floor(argv.count as number));
-            await runReadCommand(format, (ctx) =>
-              handleHandoverLatest(ctx, count),
-            );
+            await runReadCommand(format, async (ctx) => {
+              const scope = await resolveNamespaceScope(ctx.root, {
+                namespace: argv.namespace as string | undefined,
+                allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+              });
+              return handleHandoverLatest(ctx, count, scope);
+            });
           },
         )
         .command(
@@ -358,7 +427,7 @@ export function registerHandoverCommand(yargs: Argv): Argv {
           "create",
           "Create a new handover document",
           (y2) =>
-            addFormatOption(
+            addNamespaceScopeOptions(addFormatOption(
               y2
                 .option("content", {
                   type: "string",
@@ -382,7 +451,7 @@ export function registerHandoverCommand(yargs: Argv): Argv {
                   }
                   return true;
                 }),
-            ),
+            )),
           async (argv) => {
             const format = parseOutputFormat(argv.format);
             const root = (
@@ -420,6 +489,10 @@ export function registerHandoverCommand(yargs: Argv): Argv {
                 argv.slug as string,
                 format,
                 root,
+                {
+                  namespace: argv.namespace as string | undefined,
+                  allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+                },
               );
               writeOutput(result.output);
               process.exitCode = result.exitCode ?? ExitCode.OK;
@@ -612,7 +685,7 @@ export function registerTicketCommand(yargs: Argv): Argv {
           "list",
           "List tickets",
           (y2) =>
-            addNodeOption(addFormatOption(
+            addNamespaceScopeOptions(addNodeOption(addFormatOption(
               y2
                 .option("status", {
                   type: "string",
@@ -626,7 +699,7 @@ export function registerTicketCommand(yargs: Argv): Argv {
                   type: "string",
                   describe: "Filter by type",
                 }),
-            )),
+            ))),
           async (argv) => {
             const format = parseOutputFormat(argv.format);
             const nodeName = argv.node as string | undefined;
@@ -636,11 +709,25 @@ export function registerTicketCommand(yargs: Argv): Argv {
               const eff = resolveRootWithNode(orchRoot, nodeName, false, format);
               if (!eff.ok) { writeOutput(eff.output); process.exitCode = ExitCode.USER_ERROR; return; }
               await runReadCommandWithRoot(format, eff.root, (ctx) =>
-                handleTicketList({ status: argv.status as string | undefined, phase: argv.phase as string | undefined, type: argv.type as string | undefined }, ctx),
+                runScopedRead(
+                  ctx,
+                  {
+                    namespace: argv.namespace as string | undefined,
+                    allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+                  },
+                  (scopedCtx) => handleTicketList({ status: argv.status as string | undefined, phase: argv.phase as string | undefined, type: argv.type as string | undefined }, scopedCtx),
+                ),
               );
             } else {
               await runReadCommand(format, (ctx) =>
-                handleTicketList({ status: argv.status as string | undefined, phase: argv.phase as string | undefined, type: argv.type as string | undefined }, ctx),
+                runScopedRead(
+                  ctx,
+                  {
+                    namespace: argv.namespace as string | undefined,
+                    allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+                  },
+                  (scopedCtx) => handleTicketList({ status: argv.status as string | undefined, phase: argv.phase as string | undefined, type: argv.type as string | undefined }, scopedCtx),
+                ),
               );
             }
           },
@@ -665,7 +752,7 @@ export function registerTicketCommand(yargs: Argv): Argv {
         .command(
           "next",
           "Suggest next ticket to work on",
-          (y2) => addFormatOption(y2).option("count", {
+          (y2) => addNamespaceScopeOptions(addFormatOption(y2)).option("count", {
             type: "number",
             default: 1,
             describe: "Number of candidates to suggest (1-10)",
@@ -674,16 +761,35 @@ export function registerTicketCommand(yargs: Argv): Argv {
             const format = parseOutputFormat(argv.format);
             const raw = Number(argv.count) || 1;
             const count = Math.max(1, Math.min(10, Math.floor(raw)));
-            await runReadCommand(format, (ctx) => handleTicketNext(ctx, count));
+            await runReadCommand(format, (ctx) =>
+              runScopedRead(
+                ctx,
+                {
+                  namespace: argv.namespace as string | undefined,
+                  allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+                },
+                (scopedCtx) => handleTicketNext(scopedCtx, count),
+                true,
+              ),
+            );
           },
         )
         .command(
           "blocked",
           "List blocked tickets",
-          (y2) => addFormatOption(y2),
+          (y2) => addNamespaceScopeOptions(addFormatOption(y2)),
           async (argv) => {
             const format = parseOutputFormat(argv.format);
-            await runReadCommand(format, handleTicketBlocked);
+            await runReadCommand(format, (ctx) =>
+              runScopedRead(
+                ctx,
+                {
+                  namespace: argv.namespace as string | undefined,
+                  allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+                },
+                handleTicketBlocked,
+              ),
+            );
           },
         )
         .command(
@@ -1070,7 +1176,7 @@ export function registerIssueCommand(yargs: Argv): Argv {
           "list",
           "List issues",
           (y2) =>
-            addFormatOption(
+            addNamespaceScopeOptions(addFormatOption(
               y2
                 .option("status", {
                   type: "string",
@@ -1084,17 +1190,24 @@ export function registerIssueCommand(yargs: Argv): Argv {
                   type: "string",
                   describe: "Filter by component",
                 }),
-            ),
+            )),
           async (argv) => {
             const format = parseOutputFormat(argv.format);
             await runReadCommand(format, (ctx) =>
-              handleIssueList(
-                {
-                  status: argv.status as string | undefined,
-                  severity: argv.severity as string | undefined,
-                  component: argv.component as string | undefined,
-                },
+              runScopedRead(
                 ctx,
+                {
+                  namespace: argv.namespace as string | undefined,
+                  allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+                },
+                (scopedCtx) => handleIssueList(
+                  {
+                    status: argv.status as string | undefined,
+                    severity: argv.severity as string | undefined,
+                    component: argv.component as string | undefined,
+                  },
+                  scopedCtx,
+                ),
               ),
             );
           },
@@ -1956,7 +2069,7 @@ export function registerExportCommand(yargs: Argv): Argv {
     "export",
     "Self-contained project document for sharing",
     (y) =>
-      addFormatOption(
+      addNamespaceScopeOptions(addFormatOption(
         y
           .option("phase", {
             type: "string",
@@ -1975,13 +2088,20 @@ export function registerExportCommand(yargs: Argv): Argv {
             }
             return true;
           }),
-      ),
+      )),
     async (argv) => {
       const format = parseOutputFormat(argv.format);
       const mode = argv.all ? "all" : "phase";
       const phaseId = (argv.phase as string | undefined) ?? null;
       await runReadCommand(format, (ctx) =>
-        handleExport(ctx, mode as "all" | "phase", phaseId),
+        runScopedRead(
+          ctx,
+          {
+            namespace: argv.namespace as string | undefined,
+            allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+          },
+          (scopedCtx) => handleExport(scopedCtx, mode as "all" | "phase", phaseId),
+        ),
       );
     },
   );
@@ -2005,7 +2125,7 @@ export function registerNoteCommand(yargs: Argv): Argv {
           "list",
           "List notes",
           (y2) =>
-            addFormatOption(
+            addNamespaceScopeOptions(addFormatOption(
               y2
                 .option("status", {
                   type: "string",
@@ -2016,16 +2136,23 @@ export function registerNoteCommand(yargs: Argv): Argv {
                   type: "string",
                   describe: "Filter by tag",
                 }),
-            ),
+            )),
           async (argv) => {
             const format = parseOutputFormat(argv.format);
             await runReadCommand(format, (ctx) =>
-              handleNoteList(
-                {
-                  status: argv.status as string | undefined,
-                  tag: argv.tag as string | undefined,
-                },
+              runScopedRead(
                 ctx,
+                {
+                  namespace: argv.namespace as string | undefined,
+                  allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+                },
+                (scopedCtx) => handleNoteList(
+                  {
+                    status: argv.status as string | undefined,
+                    tag: argv.tag as string | undefined,
+                  },
+                  scopedCtx,
+                ),
               ),
             );
           },
@@ -2275,7 +2402,7 @@ export function registerRecommendCommand(yargs: Argv): Argv {
     "recommend",
     "Context-aware work suggestions",
     (y) =>
-      addFormatOption(y).option("count", {
+      addNamespaceScopeOptions(addFormatOption(y)).option("count", {
         type: "number",
         default: 5,
         describe: "Number of recommendations (1-10)",
@@ -2284,7 +2411,12 @@ export function registerRecommendCommand(yargs: Argv): Argv {
       const format = parseOutputFormat(argv.format);
       const raw = Number(argv.count) || 5;
       const count = Math.max(1, Math.min(10, Math.floor(raw)));
-      await runReadCommand(format, (ctx) => handleRecommend(ctx, count));
+      await runReadCommand(format, (ctx) =>
+        handleRecommend(ctx, count, {
+          namespace: argv.namespace as string | undefined,
+          allNamespaces: readAllNamespacesArg(argv as Record<string, unknown>),
+        }),
+      );
     },
   );
 }
@@ -3106,7 +3238,65 @@ export function registerNamespaceCommand(yargs: Argv): Argv {
             if (result.errorCode) process.exitCode = ExitCode.USER_ERROR;
           },
         )
-        .demandCommand(1, "Use: namespace set <ns> | namespace get"),
+        .command(
+          "list",
+          "List namespaces found in tickets and issues",
+          () => {},
+          async () => {
+            const root = (
+              await import("../core/project-root-discovery.js")
+            ).discoverProjectRoot();
+            if (!root) {
+              writeOutput(formatError("not_found", "No .story/ project found.", "md"));
+              process.exitCode = ExitCode.USER_ERROR;
+              return;
+            }
+            const result = await handleNamespaceList(root);
+            writeOutput(result.output);
+            if (result.errorCode) process.exitCode = ExitCode.USER_ERROR;
+          },
+        )
+        .command(
+          "check",
+          "Check active namespace and current branch consistency",
+          () => {},
+          async () => {
+            const root = (
+              await import("../core/project-root-discovery.js")
+            ).discoverProjectRoot();
+            if (!root) {
+              writeOutput(formatError("not_found", "No .story/ project found.", "md"));
+              process.exitCode = ExitCode.USER_ERROR;
+              return;
+            }
+            const result = await handleNamespaceCheck(root);
+            writeOutput(result.output);
+            if (result.errorCode) process.exitCode = ExitCode.USER_ERROR;
+          },
+        )
+        .command(
+          "clear",
+          "Clear the current namespace from .story/.local.json",
+          (y2) => y2.option("force", {
+            type: "boolean",
+            default: false,
+            describe: "Confirm clearing the local namespace",
+          }),
+          async (argv) => {
+            const root = (
+              await import("../core/project-root-discovery.js")
+            ).discoverProjectRoot();
+            if (!root) {
+              writeOutput(formatError("not_found", "No .story/ project found.", "md"));
+              process.exitCode = ExitCode.USER_ERROR;
+              return;
+            }
+            const result = await handleNamespaceClear(root, argv.force as boolean);
+            writeOutput(result.output);
+            if (result.errorCode) process.exitCode = ExitCode.USER_ERROR;
+          },
+        )
+        .demandCommand(1, "Use: namespace set <ns> | namespace get | namespace list | namespace check | namespace clear"),
     () => {},
   );
 }

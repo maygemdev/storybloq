@@ -5,19 +5,35 @@ import { recommend, type RecommendOptions } from "../../core/recommend.js";
 import { formatRecommendations } from "../../core/output-formatter.js";
 import { loadFederationState } from "../../federation/recommend-loader.js";
 import { readFederationCache } from "../../federation/cache.js";
+import {
+  formatNamespaceScopePrefix,
+  resolveNamespaceScope,
+  scopeProjectState,
+} from "../../core/namespace-scope.js";
 import type { CommandContext, CommandResult } from "../types.js";
 
-export async function handleRecommend(ctx: CommandContext, count: number): Promise<CommandResult> {
+export async function handleRecommend(
+  ctx: CommandContext,
+  count: number,
+  scopeOptions?: { namespace?: string; allNamespaces?: boolean },
+): Promise<CommandResult> {
+  const namespaceScope = await resolveNamespaceScope(ctx.root, scopeOptions ?? {});
   const baseOptions = buildRecommendOptions(ctx);
   const fedState = await loadFederationState(ctx.root, ctx.state.config);
   const cache = readFederationCache(join(ctx.root, ".story"));
   const options: RecommendOptions = {
     ...baseOptions,
+    namespaceScope,
     ...(fedState ? { federationState: fedState } : {}),
     ...(cache?.crossNodeRefStatuses ? { crossNodeRefStatuses: cache.crossNodeRefStatuses } : {}),
   };
   const result = recommend(ctx.state, count, options);
-  return { output: formatRecommendations(result, ctx.state, ctx.format) };
+  const scopedState = scopeProjectState(ctx.state, namespaceScope);
+  const output = formatRecommendations(result, scopedState, ctx.format);
+  if (ctx.format === "json") return { output };
+  return {
+    output: `${formatNamespaceScopePrefix(namespaceScope, ctx.state)}\n\n${output}`,
+  };
 }
 
 function buildRecommendOptions(ctx: CommandContext): RecommendOptions {

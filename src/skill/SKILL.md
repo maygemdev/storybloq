@@ -174,7 +174,7 @@ Show up to 5 unblocked tickets. If more exist, note "(+N more unblocked)".
 
 ```
 ## Decisions Pending
-- PDF generation: managed service vs pure-JS (affects T-030)
+- PDF generation: managed service vs pure-JS (affects DEV01-T-030)
 - Background jobs: Inngest vs Trigger.dev vs Vercel Cron (affects DEV01-T-001)
 ```
 

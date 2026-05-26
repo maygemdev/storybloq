@@ -55,9 +55,9 @@ function issueStatusLabel(status: string): string {
  * Builds numbered candidate text showing type, severity (for issues), and blocked status.
  *
  * Example output:
- *   1. **T-183: Compaction resume marker** (task) -- ready
- *   2. **T-184: HEAD drift tolerance** (task) -- blocked by T-183
- *   3. **ISS-077: Sentry dSYMs** (issue, high) -- ready
+ *   1. **DEV01-T-183: Compaction resume marker** (task) -- ready
+ *   2. **DEV01-T-184: HEAD drift tolerance** (task) -- blocked by DEV01-T-183
+ *   3. **DEV01-ISS-077: Sentry dSYMs** (issue, high) -- ready
  */
 export function buildTargetedCandidatesText(
   remaining: string[],
@@ -114,7 +114,7 @@ export function buildTargetedPickInstruction(
     ? firstReady.kind === "ticket"
       ? `{ "sessionId": "${sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${firstReady.id}" } }`
       : `{ "sessionId": "${sessionId}", "action": "report", "report": { "completedAction": "issue_picked", "issueId": "${firstReady.id}" } }`
-    : `{ "sessionId": "${sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "T-XXX" } }`;
+    : `{ "sessionId": "${sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "{NS}-T-XXX" } }`;
 
   const pickPrompt = firstReady
     ? `Pick **${firstReady.id}** (next target) by calling \`storybloq_autonomous_guide\` now:`

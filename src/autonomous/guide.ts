@@ -51,6 +51,8 @@ import "./stages/index.js"; // Register all extracted stages
 import { writeEvent, writeCheckpoint, markEnded, type TelemetryLayer } from "./telemetry-writer.js";
 
 import { loadProject } from "../core/project-loader.js";
+import { assertBranchNamespaceAllows } from "../core/namespace-guard.js";
+import { namespacesForTargetIds, resolveNamespaceScope } from "../core/namespace-scope.js";
 import { buildLessonDigest } from "../core/lessons.js";
 import { loadLatestSnapshot } from "../core/snapshot.js";
 import { buildRecap } from "../core/snapshot.js";
@@ -774,9 +776,50 @@ async function handleStart(root: string, args: GuideInput): Promise<McpToolResul
     }
   }
 
+  let sessionNamespace: string | null = null;
+  const explicitTargets = [
+    ...(args.ticketId ? [args.ticketId] : []),
+    ...(args.issueId ? [args.issueId] : []),
+    ...validatedTargetWork,
+  ];
+  if (explicitTargets.length > 0) {
+    const targetNamespaces = namespacesForTargetIds(explicitTargets);
+    if (targetNamespaces.length !== 1) {
+      return guideError(new Error(
+        `Targeted sessions must use exactly one namespace. Got: ${targetNamespaces.join(", ") || "none"}.`,
+      ));
+    }
+    sessionNamespace = targetNamespaces[0]!;
+  } else if (mode === "auto" || mode === "work") {
+    const namespacePreflightHead = await gitHead(root);
+    if (!namespacePreflightHead.ok) {
+      return guideError(new Error("This directory is not a git repository or git is not available. Autonomous mode requires git."));
+    }
+    const branch = namespacePreflightHead.data.branch;
+    if (isProtectedBranch(branch)) {
+      return guideError(new Error(
+        `Cannot start a work session on protected branch '${branch}'.\n` +
+        "Switch to a feature branch first.",
+      ));
+    }
+    try {
+      sessionNamespace = (await resolveNamespaceScope(root, { requireNamespace: true })).namespace;
+    } catch (err) {
+      return guideError(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+
+  if (sessionNamespace && (mode === "auto" || mode === "work")) {
+    try {
+      await assertBranchNamespaceAllows(root, sessionNamespace, "Session start");
+    } catch (err) {
+      return guideError(err instanceof Error ? err : new Error(String(err)));
+    }
+  }
+
   // Read recipe + config overrides from project (reuse targetProjectState if available from T-188 validation)
   let recipe = "coding";
-  let sessionConfig: SessionConfig = { mode };
+  let sessionConfig: SessionConfig = { mode, namespace: sessionNamespace };
   try {
     const configState = targetProjectState ?? (await loadProject(root)).state;
     const projectConfig = configState.config as Record<string, unknown>;

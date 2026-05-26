@@ -33,6 +33,7 @@ export function buildActivePayload(
     ],
     contextPressure: session.contextPressure?.level ?? "unknown",
     branch: session.git?.branch ?? null,
+    namespace: session.namespace ?? null,
     source: "hook",
     substage: session.substage ?? null,
     substageStartedAt: session.substageStartedAt ?? null,

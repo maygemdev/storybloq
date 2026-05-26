@@ -7,6 +7,7 @@ import {
 } from "../../core/project-loader.js";
 import { nextIssueID } from "../../core/id-allocation.js";
 import { getNamespace } from "../../core/local-config-loader.js";
+import { assertBranchNamespaceAllows } from "../../core/namespace-guard.js";
 import {
   formatIssueList,
   formatIssue,
@@ -225,6 +226,7 @@ export async function handleIssueCreate(
     }
 
     const namespace = await getNamespace(root);
+    await assertBranchNamespaceAllows(root, namespace, "Issue creation");
     const id = nextIssueID(state.issues, namespace);
     const issue: Issue = {
       id,

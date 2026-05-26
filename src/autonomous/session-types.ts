@@ -137,6 +137,7 @@ export interface SessionState {
     readonly risk?: string;
   };
   readonly currentIssue?: CurrentIssueRef | null;
+  readonly namespace?: string | null;
   readonly completedTickets?: ReadonlyArray<{ readonly id: string }>;
   readonly resolvedIssues?: ReadonlyArray<string>;
   readonly contextPressure?: {
@@ -212,6 +213,7 @@ export interface StatusPayloadActive {
   readonly completedThisSession: readonly string[];
   readonly contextPressure: string;
   readonly branch: string | null;
+  readonly namespace: string | null;
   readonly source: "hook";
   // T-259: Telemetry substrate fields
   readonly substage: string | null;
@@ -386,6 +388,7 @@ export const SessionStateSchema = z.object({
   revision: z.number().int().min(0),
   status: z.enum(["active", "completed", "superseded"]).default("active"),
   mode: z.enum(["auto", "review", "plan", "guided", "work"]).default("auto"),
+  namespace: z.string().regex(/^[A-Z0-9]{3,12}$/).nullable().default(null),
 
   // Ticket in progress
   ticket: z.object({

@@ -135,7 +135,9 @@ export class CompleteStage implements WorkflowStage {
         "",
         "This is an automatic mid-session checkpoint. The session is still active.",
       ].join("\n");
-      await handleHandoverCreate(content, "checkpoint", "md", ctx.root);
+      await handleHandoverCreate(content, "checkpoint", "md", ctx.root, {
+        namespace: ctx.state.namespace ?? undefined,
+      });
     } catch { /* best-effort */ }
 
     try {
@@ -279,7 +281,7 @@ export class CompleteStage implements WorkflowStage {
           '```json',
           topCandidate
             ? `{ "sessionId": "${ctx.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${topCandidate.ticket.id}" } }`
-            : `{ "sessionId": "${ctx.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "T-XXX" } }`,
+            : `{ "sessionId": "${ctx.state.sessionId}", "action": "report", "report": { "completedAction": "ticket_picked", "ticketId": "${ctx.state.namespace ?? "{NS}"}-T-XXX" } }`,
           '```',
         ].join("\n"),
         reminders: [
