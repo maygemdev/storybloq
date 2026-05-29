@@ -313,7 +313,7 @@ export function registerMigrateCommand(yargs: Argv): Argv {
 export function registerMigrateNamespaceCommand(yargs: Argv): Argv {
   return yargs.command(
     "migrate-namespace <ns>",
-    "Rename all old-format ticket/issue IDs (T-NNN, ISS-NNN) to namespaced format ({NS}-T-NNN, {NS}-ISS-NNN)",
+    "Rename old-format ticket/issue IDs and strict text mentions (T-NNN, ISS-NNN) to namespaced format ({NS}-T-NNN, {NS}-ISS-NNN)",
     (y) =>
       y
         .positional("ns", {
