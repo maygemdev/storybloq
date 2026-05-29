@@ -47,6 +47,7 @@
   },
   "scripts": {
     "build": "tsup && node scripts/build-pi-skill.mjs",
+    "prepare": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "dev": "tsup --watch",
