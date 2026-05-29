@@ -41,16 +41,15 @@ describe("Pi package manifest", () => {
   it("build script emits the configured Pi skill alias", async () => {
     const script = await readFile(join(PROJECT_ROOT, "scripts", "build-pi-skill.mjs"), "utf-8");
     expect(script).toContain("STORYBLOQ_PI_COMMAND");
-    expect(script).toContain("STORYBLOQ_VERSION_SUFFIX");
     expect(script).toContain("dist\", \"skill");
     expect(script).toContain("name: ${skillName}");
     expect(script).toContain("__STORYBLOQ_VERSION__");
   });
 
-  it("build script stamps the Pi skill with the suffixed bundle version", async () => {
+  it("build script stamps the Pi skill with the package version", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "storybloq-pi-skill-"));
     try {
-      await writeFile(join(tempRoot, "package.json"), JSON.stringify({ version: "1.4.2" }), "utf-8");
+      await writeFile(join(tempRoot, "package.json"), JSON.stringify({ version: "1.4.2-pi" }), "utf-8");
       await writeFile(
         join(tempRoot, "script.mjs"),
         await readFile(join(PROJECT_ROOT, "scripts", "build-pi-skill.mjs"), "utf-8"),

@@ -9,16 +9,9 @@ function normalizeSkillName(value) {
   return name || "story";
 }
 
-function normalizeVersionSuffix(value) {
-  const trimmed = value?.trim();
-  if (!trimmed) return "";
-  return trimmed.startsWith("-") || trimmed.startsWith("+") ? trimmed : `-${trimmed}`;
-}
-
 const pkg = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf-8"));
 const skillName = normalizeSkillName(process.env.STORYBLOQ_PI_COMMAND);
-const versionSuffix = normalizeVersionSuffix(process.env.STORYBLOQ_VERSION_SUFFIX ?? "pi");
-const storybloqVersion = `${pkg.version}${versionSuffix}`;
+const storybloqVersion = pkg.version;
 
 rmSync(targetDir, { recursive: true, force: true });
 mkdirSync(join(process.cwd(), "dist"), { recursive: true });

@@ -3,14 +3,7 @@ import { readFileSync } from "node:fs";
 
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
-function normalizeVersionSuffix(value: string | undefined): string {
-  const trimmed = value?.trim();
-  if (!trimmed) return "";
-  return trimmed.startsWith("-") || trimmed.startsWith("+") ? trimmed : `-${trimmed}`;
-}
-
-const versionSuffix = normalizeVersionSuffix(process.env.STORYBLOQ_VERSION_SUFFIX ?? "pi");
-const storybloqVersion = `${pkg.version}${versionSuffix}`;
+const storybloqVersion = pkg.version;
 const piCommand = process.env.STORYBLOQ_PI_COMMAND ?? "";
 
 export default defineConfig({
